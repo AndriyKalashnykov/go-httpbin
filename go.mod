@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/andybalholm/brotli v1.0.5
 	github.com/gorilla/mux v1.8.0
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.3
 	golang.org/x/net v0.10.0
 )
