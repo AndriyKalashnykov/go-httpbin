@@ -16,7 +16,6 @@ clean:
 
 #test: @ Run tests
 test:
-	@go generate
 	@export GOFLAGS=$(GOFLAGS); go test $(go list ./...)
 
 #build: @ Build binary
