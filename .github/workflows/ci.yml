@@ -3,10 +3,50 @@ name: ci
 on:
   push:
   pull_request:
-  merge_group:
 
 jobs:
-  ci:
+
+  builds:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [ '1.21.1' ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Build
+        run: make build
+
+  tests:
+    strategy:
+      matrix:
+        name: [unit]
+    runs-on: ubuntu-latest
+    name: test (${{ matrix.name }})
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: "go.mod"
+          cache: true
+      - name: Run ${{ matrix.name }} tests
+        run: make test
+
+  tag:
+    if: github.ref_type == 'tag'
+    needs: [tests, builds]
     timeout-minutes: 10
     runs-on: ubuntu-latest
     env:
@@ -14,22 +54,18 @@ jobs:
     permissions:
       packages: write
       contents: read
-    strategy:
-      matrix:
-        go-version: [ '1.21.1' ]
 
     steps:
-
     - name: Checkout
-      uses: actions/checkout@v4.1.0
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@v3.0.0
+      uses: docker/setup-qemu-action@v3
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3.0.0
+      uses: docker/setup-buildx-action@v3
 
     - name: Cache Docker layers
       uses: actions/cache@v3.3.2
@@ -39,17 +75,6 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-buildx-
 
-    - name: Set up Go
-      uses: actions/setup-go@v4.1.0
-      with:
-        go-version: ${{ matrix.go-version }}
-
-    - name: Test
-      run: make test
-
-    - name: Build
-      run: make build
-
     - name: Convert owner to lower case
       run: |
         echo "OWNER_LC=${OWNER,,}" >>${GITHUB_ENV}
@@ -57,8 +82,7 @@ jobs:
         OWNER: '${{ github.repository_owner }}'
 
     - name: Login to image repository
-      if: github.ref_type == 'tag'
-      uses: docker/login-action@v3.0.0
+      uses: docker/login-action@v3
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
@@ -66,7 +90,7 @@ jobs:
 
     - name: Docker meta
       id: meta
-      uses: docker/metadata-action@v5.0.0
+      uses: docker/metadata-action@v5
       with:
         images: ghcr.io/${{ env.OWNER_LC }}/go-httpbin
         flavor: latest=true
@@ -76,7 +100,7 @@ jobs:
           type=semver,pattern=v{{version}}
 
     - name: Build and push
-      uses: docker/build-push-action@v5.0.0
+      uses: docker/build-push-action@v5
       with:
         context: .
         file: ./Dockerfile
