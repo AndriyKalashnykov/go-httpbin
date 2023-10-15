@@ -61,17 +61,30 @@ jobs:
     needs: [tests, builds]
     runs-on:  ${{ matrix.os }}
     steps:
+      - name: Get tag name
+        id: get_tag_name
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+
       - name: Checkout
+        id: checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-      - env:
+          ref: ${{ steps.get_tag_name.outputs.VERSION }}
+        env:
           GITHUB_USER: ${{ github.repository_owner }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PROJECT_PATH: ${{ github.workspace }}
+
+      - name: Get the version
+        id: vars
+        run: echo ::set-output name=tag::$(echo ${GITHUB_REF:10})
+
+      - name: Run
+        id: run_golang_cross
         run: |
           echo ${PROJECT_PATH}
           echo $GOPATH
+          echo $(echo ${GITHUB_REF:10})
           docker run --rm --privileged \
           -e GITHUB_USER=${GITHUB_USER} \
           -e GITHUB_TOKEN=${GITHUB_TOKEN} \
