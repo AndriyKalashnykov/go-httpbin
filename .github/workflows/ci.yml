@@ -100,6 +100,7 @@ jobs:
         id: run_golang_cross
         run: |
           docker run --rm --privileged \
+          -v /var/run/docker.sock:/var/run/docker.sock \
           -e GITHUB_USER=${{steps.set_environment.outputs.GITHUB_USER}} \
           -e GITHUB_TOKEN=${{secrets.GITHUB_TOKEN}} \
           -v ${{steps.set_environment.outputs.PROJECT_PATH}}:/src \
