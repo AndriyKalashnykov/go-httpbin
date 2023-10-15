@@ -95,6 +95,7 @@ jobs:
           ls -al ${{steps.set_environment.outputs.PROJECT_PATH}}
           echo "------"
           ls -al ${{steps.set_environment.outputs.GOROOT}}
+          git config --global --add safe.directory ${{steps.set_environment.outputs.PROJECT_PATH}}
 
       - name: Run
         id: run_golang_cross
