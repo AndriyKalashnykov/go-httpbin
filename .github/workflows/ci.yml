@@ -75,6 +75,7 @@ jobs:
           echo ::set-output name=PROJECT_PATH::${{ github.workspace }}
           echo ::set-output name=GITHUB_USER::${{ env.OWNER_LC }}
           echo ::set-output name=GITHUB_TOKEN::${{ secrets.GITHUB_TOKEN }}
+          echo ::set-output name=GOROOT::/opt/hostedtoolcache/go/1.21.1/x64
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -91,20 +92,20 @@ jobs:
 
       - name: test git repo
         run: |
-          ls -al ${{ github.workspace }}
+          ls -al ${{steps.set_environment.outputs.PROJECT_PATH}}
           echo "------"
-          ls -al /opt/hostedtoolcache/go/1.21.1/x64/
+          ls -al ${{steps.set_environment.outputs.GOROOT}}
 
-#      - name: Run
-#        id: run_golang_cross
-#        run: |
-#          docker run --rm --privileged \
-#          -e GITHUB_USER=${{steps.set_environment.outputs.GITHUB_USER}} \
-#          -e GITHUB_TOKEN=${{secrets.GITHUB_TOKEN}} \
-#          -v ${{ github.workspace }}:/src \
-#          -v /home/runner/work/src:/go/src \
-#          -w /src \
-#          ghcr.io/gythialy/golang-cross:v1.21.3 --clean
+      - name: Run
+        id: run_golang_cross
+        run: |
+          docker run --rm --privileged \
+          -e GITHUB_USER=${{steps.set_environment.outputs.GITHUB_USER}} \
+          -e GITHUB_TOKEN=${{secrets.GITHUB_TOKEN}} \
+          -v ${{ github.workspace }}:/src \
+          -v ${{steps.set_environment.outputs.GOROOT}}:/go/src \
+          -w /src \
+          ghcr.io/gythialy/golang-cross:v1.21.3 --clean
 
 #  release-docker-images:
 #    if: github.ref_type == 'tag'
