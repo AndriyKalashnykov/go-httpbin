@@ -103,7 +103,7 @@ jobs:
           -e GITHUB_USER=${{steps.set_environment.outputs.GITHUB_USER}} \
           -e GITHUB_TOKEN=${{secrets.GITHUB_TOKEN}} \
           -v ${{ github.workspace }}:/src \
-          -v ${{steps.set_environment.outputs.GOROOT}}:/go/src \
+          -v ${{steps.set_environment.outputs.GOROOT}}/src:/go/src \
           -w /src \
           ghcr.io/gythialy/golang-cross:v1.21.3 --clean
 
