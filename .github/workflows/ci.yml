@@ -83,16 +83,22 @@ jobs:
           ref: ${{ steps.set_environment.outputs.VERSION }}
           clean: false
 
-      - name: Run
-        id: run_golang_cross
+      - name: test git repo
         run: |
-          docker run --rm --privileged \
-          -e GITHUB_USER=${{steps.set_environment.outputs.GITHUB_USER}} \
-          -e GITHUB_TOKEN=${{secrets.GITHUB_TOKEN}} \
-          -v ${{ github.workspace }}:/src \
-          -v $GOPATH/src:/go/src \
-          -w /src \
-          ghcr.io/gythialy/golang-cross:v1.21.3 --clean 
+          ls -al ${{ github.workspace }}
+          echo "------"
+          ls -al /home/runner/work/go-httpbin/go-httpbin
+
+#      - name: Run
+#        id: run_golang_cross
+#        run: |
+#          docker run --rm --privileged \
+#          -e GITHUB_USER=${{steps.set_environment.outputs.GITHUB_USER}} \
+#          -e GITHUB_TOKEN=${{secrets.GITHUB_TOKEN}} \
+#          -v ${{ github.workspace }}:/src \
+#          -v $GOPATH/src:/go/src \
+#          -w /src \
+#          ghcr.io/gythialy/golang-cross:v1.21.3 --clean
 
 #  release-docker-images:
 #    if: github.ref_type == 'tag'
