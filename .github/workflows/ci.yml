@@ -86,12 +86,10 @@ jobs:
       - name: Run
         id: run_golang_cross
         run: |
-          echo ${PROJECT_PATH}
-          echo $GOPATH
           docker run --rm --privileged \
-          -e GITHUB_USER=${{steps.set_environment.outputs.GITHUB_USER }} \
+          -e GITHUB_USER=${{steps.set_environment.outputs.GITHUB_USER}} \
           -e GITHUB_TOKEN=${{secrets.GITHUB_TOKEN}} \
-          -v "${{github.workspace}}::/src" \
+          -v "/home/runner/work/go-httpbin/go-httpbin::/src" \
           -v $GOPATH/src:/go/src \
           -w /src \
           ghcr.io/gythialy/golang-cross:v1.21.3 --clean 
