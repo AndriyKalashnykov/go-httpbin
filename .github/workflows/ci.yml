@@ -77,7 +77,7 @@ jobs:
           -e GITHUB_TOKEN=${GITHUB_TOKEN} \
           -v ${PROJECT_PATH}:/src \
           -v $GOPATH/src:/go/src \
-          -w /src
+          -w /src \
           ghcr.io/gythialy/golang-cross:v1.21.3 --clean 
 
 #  release-docker-images:
