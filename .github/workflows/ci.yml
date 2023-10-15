@@ -65,7 +65,9 @@ jobs:
         id: get_tag_name
         run: |
           echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
-          echo ::set-output name=PROJECT_PATH::/home/runner/work/go-httpbin/go-httpbin
+          echo ::set-output name=PROJECT_PATH::${{ github.workspace }}
+          echo ::set-output name=GITHUB_USER::${{ github.repository_owner }}
+          echo ::set-output name=GITHUB_TOKEN::${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout
         id: checkout
@@ -73,21 +75,16 @@ jobs:
         with:
           ref: ${{ steps.get_tag_name.outputs.VERSION }}
           clean: false
-        env:
-          GITHUB_USER: ${{ github.repository_owner }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PROJECT_PATH: ${{ github.workspace }}
 
       - name: Run
         id: run_golang_cross
         run: |
           echo ${PROJECT_PATH}
           echo $GOPATH
-          echo $(echo ${GITHUB_REF:10})
           docker run --rm --privileged \
-          -e GITHUB_USER=${GITHUB_USER} \
-          -e GITHUB_TOKEN=${GITHUB_TOKEN} \
-          -v /home/runner/work/go-httpbin/go-httpbin:/src \
+          -e GITHUB_USER= ${{ github.repository_owner }} \
+          -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
+          -v ${{ github.workspace }}::/src \
           -v $GOPATH/src:/go/src \
           -w /src \
           ghcr.io/gythialy/golang-cross:v1.21.3 --clean 
