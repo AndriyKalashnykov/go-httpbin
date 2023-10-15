@@ -61,12 +61,19 @@ jobs:
     needs: [tests, builds]
     runs-on:  ${{ matrix.os }}
     steps:
+      - name: Convert owner to lower case
+        id: convert-owner
+        run: |
+          echo "OWNER_LC=${OWNER,,}" >>${GITHUB_ENV}
+        env:
+          OWNER: '${{ github.repository_owner }}'
+
       - name: Get tag name
         id: get_tag_name
         run: |
           echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
           echo ::set-output name=PROJECT_PATH::${{ github.workspace }}
-          echo ::set-output name=GITHUB_USER::${{ github.repository_owner }}
+          echo ::set-output name=GITHUB_USER::${{ env.OWNER_LC }}
           echo ::set-output name=GITHUB_TOKEN::${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout
@@ -82,7 +89,7 @@ jobs:
           echo ${PROJECT_PATH}
           echo $GOPATH
           docker run --rm --privileged \
-          -e GITHUB_USER= ${{ github.repository_owner }} \
+          -e GITHUB_USER=${{ github.repository_owner }} \
           -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
           -v ${{ github.workspace }}::/src \
           -v $GOPATH/src:/go/src \
