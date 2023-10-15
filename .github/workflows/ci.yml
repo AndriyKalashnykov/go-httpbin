@@ -62,7 +62,7 @@ jobs:
     runs-on:  ${{ matrix.os }}
     steps:
       - name: Convert owner to lower case
-        id: convert-owner
+        id: convert_owner
         run: |
           echo "OWNER_LC=${OWNER,,}" >>${GITHUB_ENV}
         env:
@@ -89,7 +89,7 @@ jobs:
           docker run --rm --privileged \
           -e GITHUB_USER=${{steps.set_environment.outputs.GITHUB_USER}} \
           -e GITHUB_TOKEN=${{secrets.GITHUB_TOKEN}} \
-          -v /home/runner/work/go-httpbin/go-httpbin::/src \
+          -v ${{ github.workspace }}:/src \
           -v $GOPATH/src:/go/src \
           -w /src \
           ghcr.io/gythialy/golang-cross:v1.21.3 --clean 
