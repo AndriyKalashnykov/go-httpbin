@@ -63,7 +63,9 @@ jobs:
     steps:
       - name: Get tag name
         id: get_tag_name
-        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+        run: |
+          echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+          echo ::set-output name=PROJECT_PATH::/home/runner/work/go-httpbin/go-httpbin
 
       - name: Checkout
         id: checkout
@@ -75,10 +77,6 @@ jobs:
           GITHUB_USER: ${{ github.repository_owner }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PROJECT_PATH: ${{ github.workspace }}
-
-      - name: Get the version
-        id: vars
-        run: echo ::set-output name=tag::$(echo ${GITHUB_REF:10})
 
       - name: Run
         id: run_golang_cross
