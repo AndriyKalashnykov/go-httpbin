@@ -42,21 +42,21 @@ builds:
       - -extldflags "-lc -lrt -lpthread --static"
       - -s -w -X main.version={{ .Version }}
 
-  - id: go-httpbin-darwin-amd64
-    binary: go-httpbin
-    main: ./cmd/httpbin/main.go
-    goos:
-      - darwin
-    goarch:
-      - amd64
-    env:
-      - CGO_ENABLED=1
-      - CC=/home/runner/work/osxcross/target/bin/o64-clang
-      - CXX=/home/runner/work/osxcross/target/bin/o64-clang++
-    flags:
-      - -trimpath
-    ldflags:
-      - -s -w -X main.version={{ .Version }}
+#  - id: go-httpbin-darwin-amd64
+#    binary: go-httpbin
+#    main: ./cmd/httpbin/main.go
+#    goos:
+#      - darwin
+#    goarch:
+#      - amd64
+#    env:
+#      - CGO_ENABLED=1
+#      - CC=/home/runner/work/osxcross/target/bin/o64-clang
+#      - CXX=/home/runner/work/osxcross/target/bin/o64-clang++
+#    flags:
+#      - -trimpath
+#    ldflags:
+#      - -s -w -X main.version={{ .Version }}
 
 #  - id: go-httpbin-darwin-arm64
 #    binary: go-httpbin
