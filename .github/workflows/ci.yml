@@ -107,18 +107,39 @@ jobs:
           pwd
           ls -al *
 
-      - name: Run
-        id: run_golang_cross
-        run: |
-          docker run --rm --privileged \
-          -v /var/run/docker.sock:/var/run/docker.sock \
-          -e GITHUB_USER=${{steps.set_environment.outputs.GITHUB_USER}} \
-          -e GITHUB_TOKEN=${{secrets.GITHUB_TOKEN}} \
-          -v ${{steps.set_environment.outputs.PROJECT_PATH}}:/src \
-          -w /src \
-          ghcr.io/gythialy/golang-cross:v1.21.3 --clean
+
+#      - name: Run
+#        id: run_golang_cross
+#        run: |
+#          docker run --rm --privileged \
+#          -v /var/run/docker.sock:/var/run/docker.sock \
+#          -e GITHUB_USER=${{steps.set_environment.outputs.GITHUB_USER}} \
+#          -e GITHUB_TOKEN=${{secrets.GITHUB_TOKEN}} \
+#          -v ${{steps.set_environment.outputs.PROJECT_PATH}}:/src \
+#          -w /src \
+#          ghcr.io/gythialy/golang-cross:v1.21.3 --clean
 #          -v ${{steps.set_environment.outputs.GOROOT}}/src:/go/src \
 
+      -
+        name: libssl1.1 => libssl1.0-dev for OSXCross
+        run: |
+          echo 'deb http://security.ubuntu.com/ubuntu bionic-security main' | sudo tee -a /etc/apt/sources.list
+          sudo apt update && apt-cache policy libssl1.0-dev
+          sudo apt-get install libssl1.0-dev
+      -
+        name: OSXCross for CGO Support
+        run: |
+          mkdir ../../osxcross
+          git clone https://github.com/plentico/osxcross-target.git ../../osxcross/target
+      -
+        name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.snapcraft_token }}
 
 #  release-docker-images:
 #    if: github.ref_type == 'tag'
