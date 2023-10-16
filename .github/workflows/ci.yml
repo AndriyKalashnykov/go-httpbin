@@ -123,7 +123,8 @@ jobs:
       -
         name: libssl1.1 => libssl1.0-dev for OSXCross
         run: |
-          sudo apt update && apt-cache policy libssl1.0-dev
+          sudo apt-get install software-properties-common
+          sudo apt-add-repository -y ppa:rael-gc/rvm
           sudo apt-get install libssl1.0-dev
       -
         name: OSXCross for CGO Support
