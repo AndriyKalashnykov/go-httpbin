@@ -122,7 +122,7 @@ jobs:
 
       - name: Install libraries for cross compilation
         run: |
-          ./scripts/install-cross-libs-ubuntu.sh
+          ./scripts/install-clang-17-ubuntu.sh
           ./scripts/install-cross-libs-ubuntu.sh
 
 #      -

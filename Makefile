@@ -3,6 +3,7 @@ CURRENTTAG:=$(shell git describe --tags --abbrev=0)
 NEWTAG ?= $(shell bash -c 'read -p "Please provide a new tag (currnet tag - ${CURRENTTAG}): " newtag; echo $$newtag')
 GOFLAGS=-mod=mod
 GO_BUILDER_VERSION=v1.21.3
+OSXCROSS_PATH=/opt/osxcross-clang-17.0.3-macosx-14.0/target/bin
 
 IS_DARWIN := 0
 IS_LINUX := 0
@@ -87,10 +88,10 @@ test-release: clean
 #		ghcr.io/gythialy/golang-cross:$(GO_BUILDER_VERSION) --skip=publish --clean --snapshot
 
 ifeq ($(IS_LINUX), 1)
-	export PATH=/opt/osxcross-clang-17.0.3-macosx-14.0/target/bin:${PATH} && goreleaser --skip=publish --clean --snapshot --config .goreleaser-Linux.yml
+	export PATH=$(OSXCROSS_PATH):${PATH} && goreleaser --skip=publish --clean --snapshot --config .goreleaser-Linux.yml && goreleaser --skip=publish --clean --snapshot --config .goreleaser-Darwin-cross.yml
 endif
 ifeq ($(IS_DARWIN), 1)
-	export PATH=/opt/osxcross-clang-17.0.3-macosx-14.0/target/bin:${PATH} && goreleaser --skip=publish --clean --snapshot --config .goreleaser-Darwin.yml
+	export PATH=$(OSXCROSS_PATH):${PATH} && goreleaser --skip=publish --clean --snapshot --config .goreleaser-Darwin.yml
 endif
 
 #release: @ Create and push a new tag
