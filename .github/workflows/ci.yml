@@ -107,7 +107,6 @@ jobs:
           pwd
           ls -al *
 
-
 #      - name: Run
 #        id: run_golang_cross
 #        run: |
