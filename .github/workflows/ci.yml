@@ -138,8 +138,7 @@ jobs:
           version: latest
           args: release --clean
         env:
-          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.snapcraft_token }}
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
 #  release-docker-images:
 #    if: github.ref_type == 'tag'
