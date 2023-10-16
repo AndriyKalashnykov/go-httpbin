@@ -57,7 +57,7 @@ jobs:
     strategy:
       matrix:
         go-version: [ 1.21 ]
-        os: [ ubuntu-latest]
+        os: [ ubuntu-22.04]
 #    needs: [tests, builds]
     runs-on:  ${{ matrix.os }}
     steps:
@@ -123,17 +123,17 @@ jobs:
       - name: Install libraries for cross compilation
         run: ./scripts/install-cross-libs-ubuntu.sh
 
-      -
-        name: libssl1.1 => libssl1.0-dev for OSXCross
-        run: |
-          sudo apt-get install software-properties-common
-          sudo apt-add-repository -y ppa:rael-gc/rvm
-          sudo apt-get install -y libssl1.0-dev
+#      -
+#        name: libssl1.1 => libssl1.0-dev for OSXCross
+#        run: |
+#          sudo apt-get install software-properties-common
+#          sudo apt-add-repository -y ppa:rael-gc/rvm
+#          sudo apt-get install -y libssl1.0-dev
       -
         name: OSXCross for CGO Support
         run: |
           mkdir ../../osxcross
-          git clone https://github.com/plentico/osxcross-target.git ../../osxcross/target
+          git clone https://github.com/AndriyKalashnykov/osxcross-target.git ../../osxcross/target
       -
         name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5
