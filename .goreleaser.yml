@@ -58,21 +58,21 @@ builds:
     ldflags:
       - -s -w -X main.version={{ .Version }}
 
-  - id: go-httpbin-darwin-arm64
-    binary: go-httpbin
-    main: ./cmd/httpbin/main.go
-    goarch:
-      - arm64
-    goos:
-      - darwin
-    env:
-      - CGO_ENABLED=1
-      - CC=/home/runner/work/osxcross/target/bin/oa64-clang
-      - CXX=/home/runner/work/osxcross/target/bin/oa64-clang++
-    flags:
-      - -trimpath
-    ldflags:
-      - -s
+#  - id: go-httpbin-darwin-arm64
+#    binary: go-httpbin
+#    main: ./cmd/httpbin/main.go
+#    goarch:
+#      - arm64
+#    goos:
+#      - darwin
+#    env:
+#      - CGO_ENABLED=1
+#      - CC=/home/runner/work/osxcross/target/bin/oa64-clang
+#      - CXX=/home/runner/work/osxcross/target/bin/oa64-clang++
+#    flags:
+#      - -trimpath
+#    ldflags:
+#      - -s
 
   - id: go-httpbin-windows-amd64
     binary: go-httpbin
