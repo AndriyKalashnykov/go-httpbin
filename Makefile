@@ -2,6 +2,7 @@
 CURRENTTAG:=$(shell git describe --tags --abbrev=0)
 NEWTAG ?= $(shell bash -c 'read -p "Please provide a new tag (currnet tag - ${CURRENTTAG}): " newtag; echo $$newtag')
 GOFLAGS=-mod=mod
+GO_BUILDER_VERSION=v1.21.3
 
 #help: @ List available tasks
 help:
@@ -29,6 +30,16 @@ run:
 #get: @ Download and install dependency packages
 get:
 	@export GOFLAGS=$(GOFLAGS); go get . ; go mod tidy
+
+test-release: clean
+#	docker run --rm --privileged \
+#		-v $(CURDIR):/golang-cross-example \
+#		-v /var/run/docker.sock:/var/run/docker.sock \
+#		-v $(GOPATH)/src:/go/src \
+#		-w /golang-cross-example \
+#		ghcr.io/gythialy/golang-cross:$(GO_BUILDER_VERSION) --skip=publish --clean --snapshot
+
+	export PATH=/opt/osxcross-clang-17.0.3-macosx-14.0/target/bin:${PATH} && goreleaser --skip=publish --clean --snapshot
 
 #release: @ Create and push a new tag
 release: build
