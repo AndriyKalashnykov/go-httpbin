@@ -51,8 +51,8 @@ builds:
       - amd64
     env:
       - CGO_ENABLED=1
-      - CC=o64-clang
-      - CXX=o64-clang++
+      - CC=/home/runner/work/osxcross/target/bin/o64-clang
+      - CXX=/home/runner/work/osxcross/target/bin/o64-clang++
     flags:
       - -trimpath
     ldflags:
@@ -67,8 +67,8 @@ builds:
       - darwin
     env:
       - CGO_ENABLED=1
-      - CC=oa64-clang
-      - CXX=oa64-clang++
+      - CC=/home/runner/work/osxcross/target/bin/oa64-clang
+      - CXX=/home/runner/work/osxcross/target/bin/oa64-clang++
     flags:
       - -trimpath
     ldflags:
