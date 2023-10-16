@@ -72,6 +72,7 @@ builds:
     flags:
       - -trimpath
     ldflags:
+      - -extldflags "-lc -lrt -lpthread --static"
       - -s -w -X main.version={{ .Version }}
 
   - id: go-httpbin-windows-amd64
