@@ -56,7 +56,7 @@ builds:
       - CC=o64-clang
       - CXX=o64-clang++
     flags:
-      - -trimpath
+      - -tags=cgo
     ldflags:
       - -s -w -X main.version={{ .Version }}
 
@@ -72,7 +72,7 @@ builds:
       - CC=oa64-clang
       - CXX=oa64-clang++
     flags:
-      - -trimpath
+      - -tags=cgo
     ldflags:
       - -s
 
