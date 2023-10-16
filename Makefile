@@ -4,6 +4,53 @@ NEWTAG ?= $(shell bash -c 'read -p "Please provide a new tag (currnet tag - ${CU
 GOFLAGS=-mod=mod
 GO_BUILDER_VERSION=v1.21.3
 
+IS_DARWIN := 0
+IS_LINUX := 0
+IS_FREEBSD := 0
+IS_WINDOWS := 0
+IS_AMD64 := 0
+IS_AARCH64 := 0
+IS_RISCV64 := 0
+
+# Test Windows apart because it doesn't support `uname -s`.
+ifeq ($(OS), Windows_NT)
+	# We can assume it will likely be in amd64.
+	IS_AMD64 := 1
+	IS_WINDOWS := 1
+else
+	# Platform
+	uname := $(shell uname -s)
+
+	ifeq ($(uname), Darwin)
+		IS_DARWIN := 1
+	else ifeq ($(uname), Linux)
+		IS_LINUX := 1
+	else ifeq ($(uname), FreeBSD)
+		IS_FREEBSD := 1
+	else
+		# We use spaces instead of tabs to indent `$(error)`
+		# otherwise it's considered as a command outside a
+		# target and it will fail.
+                $(error Unrecognized platform, expect `Darwin`, `Linux` or `Windows_NT`)
+	endif
+
+	# Architecture
+	uname := $(shell uname -m)
+
+	ifneq (, $(filter $(uname), x86_64 amd64))
+		IS_AMD64 := 1
+	else ifneq (, $(filter $(uname), aarch64 arm64))
+		IS_AARCH64 := 1
+	else ifneq (, $(filter $(uname), riscv64))
+		IS_RISCV64 := 1
+	else
+		# We use spaces instead of tabs to indent `$(error)`
+		# otherwise it's considered as a command outside a
+		# target and it will fail.
+                $(error Unrecognized architecture, expect `x86_64`, `aarch64`, `arm64`, 'riscv64')
+	endif
+endif
+
 #help: @ List available tasks
 help:
 	@clear
@@ -39,7 +86,12 @@ test-release: clean
 #		-w /golang-cross-example \
 #		ghcr.io/gythialy/golang-cross:$(GO_BUILDER_VERSION) --skip=publish --clean --snapshot
 
-	export PATH=/opt/osxcross-clang-17.0.3-macosx-14.0/target/bin:${PATH} && goreleaser --skip=publish --clean --snapshot
+ifeq ($(IS_LINUX), 1)
+	export PATH=/opt/osxcross-clang-17.0.3-macosx-14.0/target/bin:${PATH} && goreleaser --skip=publish --clean --snapshot --config .goreleaser-Linux.yml
+endif
+ifeq ($(IS_DARWIN), 1)
+	export PATH=/opt/osxcross-clang-17.0.3-macosx-14.0/target/bin:${PATH} && goreleaser --skip=publish --clean --snapshot --config .goreleaser-Darwin.yml
+endif
 
 #release: @ Create and push a new tag
 release: build
