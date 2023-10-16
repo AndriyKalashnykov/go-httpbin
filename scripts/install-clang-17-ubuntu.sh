@@ -7,8 +7,8 @@ if [[ "${TRACE-0}" == "1" ]]; then
     set -o xtrace
 fi
 
-sudo apt-get purge -y llvm-17 clang-17
-sudo apt autoremove -y
+#sudo apt-get purge -y llvm-17 clang-17
+#sudo apt autoremove -y
 
 sudo curl -s https://apt.llvm.org/llvm.sh | sudo bash /dev/stdin 17 all
 
