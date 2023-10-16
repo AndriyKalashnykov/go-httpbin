@@ -121,7 +121,9 @@ jobs:
 #          -v ${{steps.set_environment.outputs.GOROOT}}/src:/go/src \
 
       - name: Install libraries for cross compilation
-        run: ./scripts/install-cross-libs-ubuntu.sh
+        run: |
+          ./scripts/install-cross-libs-ubuntu.sh
+          ./scripts/install-cross-libs-ubuntu.sh
 
 #      -
 #        name: libssl1.1 => libssl1.0-dev for OSXCross
