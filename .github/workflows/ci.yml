@@ -146,6 +146,32 @@ jobs:
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
+      - name: Prepare
+        id: prepare
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          echo ::set-output name=tag_name::${TAG}
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Run GoReleaser MacOS cross
+        run: |
+          docker run \
+          		--rm \
+          		--privileged \
+          		-e CGO_ENABLED=1 \
+          		-e GITHUB_TOKEN \
+          		-v /var/run/docker.sock:/var/run/docker.sock \
+          		-v `pwd`:/go/src/$(PACKAGE_NAME) \
+          		-w /go/src/$(PACKAGE_NAME) \
+          		ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
+          		--clean --config .goreleaser-Darwin-cross.yml
+        env:
+          PACKAGE_NAME: github.com/AndriyKalashnykov/go-httpbin
+          GOLANG_CROSS_VERSION: v1.21
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.prepare.outputs.tag_name }}
+
 #      -
 #        name: Run GoReleaser MacOS cross
 #        uses: goreleaser/goreleaser-action@v5
@@ -155,51 +181,51 @@ jobs:
 #        env:
 #          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
-  release-macos-binaries:
-    if: github.ref_type == 'tag'
-    strategy:
-      matrix:
-        go-version: [ 1.21 ]
-        os: [ macos-13 ]
-    #    needs: [tests, builds]
-    runs-on:  ${{ matrix.os }}
-    steps:
-      - name: Convert owner to lower case
-        id: convert_owner
-        run: |
-          echo "OWNER_LC=${OWNER,,}" >>${GITHUB_ENV}
-        env:
-          OWNER: '${{ github.repository_owner }}'
-
-      - name: Set environment
-        id: set_environment
-        run: |
-          echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
-          echo ::set-output name=PROJECT_PATH::${{github.workspace}}
-          echo ::set-output name=GITHUB_USER::${{env.OWNER_LC}}
-          echo ::set-output name=GITHUB_TOKEN::${{secrets.GITHUB_TOKEN}}
-          echo ::set-output name=GOROOT::/opt/hostedtoolcache/go/1.21.1/x64
-
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: ${{ matrix.go-version }}
-          cache: true
-
-      - name: Checkout
-        id: checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ steps.set_environment.outputs.VERSION }}
-
-      -
-        name: Run GoReleaser MacOS
-        uses: goreleaser/goreleaser-action@v5
-        with:
-          version: latest
-          args: release --clean --config .goreleaser-Darwin.yml
-        env:
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+#  release-macos-binaries:
+#    if: github.ref_type == 'tag'
+#    strategy:
+#      matrix:
+#        go-version: [ 1.21 ]
+#        os: [ macos-13 ]
+#    #    needs: [tests, builds]
+#    runs-on:  ${{ matrix.os }}
+#    steps:
+#      - name: Convert owner to lower case
+#        id: convert_owner
+#        run: |
+#          echo "OWNER_LC=${OWNER,,}" >>${GITHUB_ENV}
+#        env:
+#          OWNER: '${{ github.repository_owner }}'
+#
+#      - name: Set environment
+#        id: set_environment
+#        run: |
+#          echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+#          echo ::set-output name=PROJECT_PATH::${{github.workspace}}
+#          echo ::set-output name=GITHUB_USER::${{env.OWNER_LC}}
+#          echo ::set-output name=GITHUB_TOKEN::${{secrets.GITHUB_TOKEN}}
+#          echo ::set-output name=GOROOT::/opt/hostedtoolcache/go/1.21.1/x64
+#
+#      - name: Set up Go
+#        uses: actions/setup-go@v4
+#        with:
+#          go-version: ${{ matrix.go-version }}
+#          cache: true
+#
+#      - name: Checkout
+#        id: checkout
+#        uses: actions/checkout@v4
+#        with:
+#          ref: ${{ steps.set_environment.outputs.VERSION }}
+#
+#      -
+#        name: Run GoReleaser MacOS
+#        uses: goreleaser/goreleaser-action@v5
+#        with:
+#          version: latest
+#          args: release --clean --config .goreleaser-Darwin.yml
+#        env:
+#          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
 #  release-docker-images:
 #    if: github.ref_type == 'tag'
