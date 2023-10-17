@@ -1,4 +1,4 @@
-project_name: consumer
+project_name: go-httpbin
 env:
   - GO111MODULE=on
 
@@ -82,7 +82,7 @@ nfpms:
     bindir: /usr/bin
 
 checksum:
-  name_template: "checksums-linux.txt"
+  name_template: "checksums.txt"
 
 changelog:
   sort: asc

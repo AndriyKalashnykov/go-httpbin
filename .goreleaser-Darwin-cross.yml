@@ -49,7 +49,7 @@ archives:
     format_overrides:
       - format: zip
         goos: windows
-    id: consumer
+    id: go-httpbin
     name_template: "{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}{{if .Arm}}_{{.Arm}}{{end}}"
 
 checksum:

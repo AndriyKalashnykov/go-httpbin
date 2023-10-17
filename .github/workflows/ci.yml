@@ -61,21 +61,21 @@ jobs:
 #    needs: [tests, builds]
     runs-on:  ${{ matrix.os }}
     steps:
-      - name: Convert owner to lower case
-        id: convert_owner
-        run: |
-          echo "OWNER_LC=${OWNER,,}" >>${GITHUB_ENV}
-        env:
-          OWNER: '${{ github.repository_owner }}'
+#      - name: Convert owner to lower case
+#        id: convert_owner
+#        run: |
+#          echo "OWNER_LC=${OWNER,,}" >>${GITHUB_ENV}
+#        env:
+#          OWNER: '${{ github.repository_owner }}'
 
-      - name: Set environment
-        id: set_environment
-        run: |
-          echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
-          echo ::set-output name=PROJECT_PATH::${{github.workspace}}
-          echo ::set-output name=GITHUB_USER::${{env.OWNER_LC}}
-          echo ::set-output name=GITHUB_TOKEN::${{secrets.GITHUB_TOKEN}}
-          echo ::set-output name=GOROOT::/opt/hostedtoolcache/go/1.21.1/x64
+#      - name: Set environment
+#        id: set_environment
+#        run: |
+#          echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+#          echo ::set-output name=PROJECT_PATH::${{github.workspace}}
+#          echo ::set-output name=GITHUB_USER::${{env.OWNER_LC}}
+#          echo ::set-output name=GITHUB_TOKEN::${{secrets.GITHUB_TOKEN}}
+#          echo ::set-output name=GOROOT::/opt/hostedtoolcache/go/1.21.1/x64
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -89,22 +89,22 @@ jobs:
         with:
           ref: ${{ steps.set_environment.outputs.VERSION }}
 
-      - name: test git repo
-        run: |
-          ls -al ${{steps.set_environment.outputs.PROJECT_PATH}}
-          echo "------"
-          ls -al ${{steps.set_environment.outputs.GOROOT}}
-          git config --global --add safe.directory ${{steps.set_environment.outputs.PROJECT_PATH}}
-          pwd
-          git status
-#          git init
+#      - name: test git repo
+#        run: |
+#          ls -al ${{steps.set_environment.outputs.PROJECT_PATH}}
+#          echo "------"
+#          ls -al ${{steps.set_environment.outputs.GOROOT}}
+#          git config --global --add safe.directory ${{steps.set_environment.outputs.PROJECT_PATH}}
+#          pwd
 #          git status
-
-      - name: Build
-        run: |
-          make build
-          pwd
-          ls -al *
+##          git init
+##          git status
+#
+#      - name: Build
+#        run: |
+#          make build
+#          pwd
+#          ls -al *
 
 #      - name: Run
 #        id: run_golang_cross
@@ -118,33 +118,27 @@ jobs:
 #          ghcr.io/gythialy/golang-cross:v1.21.3 --clean
 #          -v ${{steps.set_environment.outputs.GOROOT}}/src:/go/src \
 
-      - name: Install libraries for cross compilation
-        run: |
-          ./scripts/install-clang-17-ubuntu.sh
-          ./scripts/install-cross-libs-ubuntu.sh
+#      - name: Install libraries for cross compilation
+#        run: |
+#          ./scripts/install-clang-17-ubuntu.sh
+#          ./scripts/install-cross-libs-ubuntu.sh
+#
+#      -
+#        name: OSXCross for CGO Support
+#        run: |
+#          mkdir ../../osxcross
+#          git clone https://github.com/AndriyKalashnykov/osxcross-target.git ../../osxcross/target
+#
+#      - run: echo "/home/runner/work/osxcross/target/bin" >> $GITHUB_PATH
 
 #      -
-#        name: libssl1.1 => libssl1.0-dev for OSXCross
-#        run: |
-#          sudo apt-get install software-properties-common
-#          sudo apt-add-repository -y ppa:rael-gc/rvm
-#          sudo apt-get install -y libssl1.0-dev
-      -
-        name: OSXCross for CGO Support
-        run: |
-          mkdir ../../osxcross
-          git clone https://github.com/AndriyKalashnykov/osxcross-target.git ../../osxcross/target
-
-      - run: echo "/home/runner/work/osxcross/target/bin" >> $GITHUB_PATH
-
-      -
-        name: Run GoReleaser Linux
-        uses: goreleaser/goreleaser-action@v5
-        with:
-          version: latest
-          args: release --clean --config .goreleaser-Linux.yml
-        env:
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+#        name: Run GoReleaser Linux
+#        uses: goreleaser/goreleaser-action@v5
+#        with:
+#          version: latest
+#          args: release --clean --config .goreleaser-Linux.yml
+#        env:
+#          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
       - name: Prepare
         id: prepare
@@ -154,6 +148,24 @@ jobs:
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
+
+      - name: Run GoReleaser Linux
+        run: |
+          docker run \
+          		--rm \
+          		--privileged \
+          		-e CGO_ENABLED=1 \
+          		-e GITHUB_TOKEN \
+          		-v /var/run/docker.sock:/var/run/docker.sock \
+          		-v `pwd`:/go/src/$(PACKAGE_NAME) \
+          		-w /go/src/$(PACKAGE_NAME) \
+          		ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
+          		--clean --config .goreleaser-Linux.yml
+        env:
+          PACKAGE_NAME: github.com/AndriyKalashnykov/go-httpbin
+          GOLANG_CROSS_VERSION: v1.21
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.prepare.outputs.tag_name }}
 
       - name: Run GoReleaser MacOS cross
         run: |
