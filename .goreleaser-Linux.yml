@@ -82,7 +82,7 @@ nfpms:
     bindir: /usr/bin
 
 checksum:
-  name_template: "checksums.txt"
+  name_template: "checksums-{{ .Os }}.txt"
 
 changelog:
   sort: asc
