@@ -143,7 +143,16 @@ jobs:
         uses: goreleaser/goreleaser-action@v5
         with:
           version: latest
-          args: release --clean --config .goreleaser-Linux.yml --config .goreleaser-Darwin-cross.yml
+          args: release --clean --config .goreleaser-Linux.yml
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+
+      -
+        name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          version: latest
+          args: release --clean --config .goreleaser-Darwin-cross.yml
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
