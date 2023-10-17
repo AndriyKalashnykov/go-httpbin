@@ -53,7 +53,7 @@ archives:
     name_template: "{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}{{if .Arm}}_{{.Arm}}{{end}}"
 
 checksum:
-  name_template: "checksums-{{ .Os }}.txt"
+  name_template: "checksums-darwin.txt"
 
 changelog:
   sort: asc
