@@ -61,7 +61,7 @@ help:
 
 #clean: @ Cleanup
 clean:
-	@rm -rf ./dist
+	@sudo rm -rf ./dist
 
 #test: @ Run tests
 test:
@@ -80,19 +80,25 @@ get:
 	@export GOFLAGS=$(GOFLAGS); go get . ; go mod tidy
 
 test-release: clean
-#	docker run --rm --privileged \
-#		-v $(CURDIR):/golang-cross-example \
-#		-v /var/run/docker.sock:/var/run/docker.sock \
-#		-v $(GOPATH)/src:/go/src \
-#		-w /golang-cross-example \
-#		ghcr.io/gythialy/golang-cross:$(GO_BUILDER_VERSION) --skip=publish --clean --snapshot
+	docker run --rm --privileged \
+		-v $(CURDIR):/golang-cross-example \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v $(GOPATH)/src:/go/src \
+		-w /golang-cross-example \
+		ghcr.io/gythialy/golang-cross:$(GO_BUILDER_VERSION) --skip=publish --clean --snapshot --config .goreleaser-Linux.yml
 
-ifeq ($(IS_LINUX), 1)
-	export PATH=$(OSXCROSS_PATH):${PATH} && goreleaser --skip=publish --clean --snapshot --config .goreleaser-Linux.yml && goreleaser --skip=publish --clean --snapshot --config .goreleaser-Darwin-cross.yml
-endif
-ifeq ($(IS_DARWIN), 1)
-	export PATH=$(OSXCROSS_PATH):${PATH} && goreleaser --skip=publish --clean --snapshot --config .goreleaser-Darwin.yml
-endif
+	docker run --rm --privileged \
+		-v $(CURDIR):/golang-cross-example \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v $(GOPATH)/src:/go/src \
+		-w /golang-cross-example \
+		ghcr.io/gythialy/golang-cross:$(GO_BUILDER_VERSION) --skip=publish --clean --snapshot --config .goreleaser-Darwin-cross.yml
+#ifeq ($(IS_LINUX), 1)
+#	export PATH=$(OSXCROSS_PATH):${PATH} && goreleaser --skip=publish --clean --snapshot --config .goreleaser-Linux.yml && goreleaser --skip=publish --clean --snapshot --config .goreleaser-Darwin-cross.yml
+#endif
+#ifeq ($(IS_DARWIN), 1)
+#	export PATH=$(OSXCROSS_PATH):${PATH} && goreleaser --skip=publish --clean --snapshot --config .goreleaser-Darwin.yml
+#endif
 
 #release: @ Create and push a new tag
 release: build
