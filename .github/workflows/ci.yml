@@ -28,6 +28,7 @@ jobs:
         run: make build
 
   tests:
+    needs: [builds]
     strategy:
       matrix:
         os: [ubuntu-latest]
