@@ -52,7 +52,7 @@ jobs:
       - name: Run [${{ matrix.name }} - ${{ matrix.os }}] tests
         run: make test
 
-  release-linux-binaries:
+  release-binaries:
     if: github.ref_type == 'tag'
     strategy:
       matrix:
@@ -61,12 +61,6 @@ jobs:
     needs: [tests, builds]
     runs-on:  ${{ matrix.os }}
     steps:
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: ${{ matrix.go-version }}
-          cache: true
-
       - name: Checkout
         id: checkout
         uses: actions/checkout@v4
