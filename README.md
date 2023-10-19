@@ -6,9 +6,9 @@
 # go-httpbin
 
 A Go handler that lets you test your HTTP client, retry logic, streaming behavior, timeouts etc.
-with the endpoints of [httpbin.org][ht] locally in a [`net/http/httptest.Server`][hts].
+with the endpoints of [httpbin.org](http://httpbin.org) locally in a [net/http/httptest.Server](https://pkg.go.dev/net/http/httptest).
 
-This way, you can write tests without relying on an external dependency like [httpbin.org][ht].
+This way, you can write tests without relying on an external dependency like [httpbin.org].
 
 ## Endpoints
 
