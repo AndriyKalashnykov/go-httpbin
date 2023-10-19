@@ -60,7 +60,7 @@ jobs:
         id: checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ steps.set_environment.outputs.VERSION }}
+          fetch-depth: 0
 
       - name: Run GoReleaser Linux
         run: |
@@ -78,7 +78,6 @@ jobs:
           PACKAGE_NAME: github.com/AndriyKalashnykov/go-httpbin
           GOLANG_CROSS_VERSION: v1.21
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ steps.prepare.outputs.tag_name }}
 
       - name: Run GoReleaser MacOS
         run: |
@@ -96,7 +95,6 @@ jobs:
           PACKAGE_NAME: github.com/AndriyKalashnykov/go-httpbin
           GOLANG_CROSS_VERSION: v1.21
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ steps.prepare.outputs.tag_name }}
 
   release-docker-images:
     if: github.ref_type == 'tag'
