@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: [1.22]
+        go-version: [1.23]
 
     steps:
       - name: Checkout
@@ -33,7 +33,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         name: [unit]
-        go-version: [1.22]
+        go-version: [1.23]
     runs-on: ${{ matrix.os }}
     name: test (${{ matrix.name }}, ${{ matrix.os }})
     steps:
@@ -51,8 +51,8 @@ jobs:
     if: github.ref_type == 'tag'
     strategy:
       matrix:
-        go-version: [ 1.22 ]
-        os: [ ubuntu-22.04]
+        go-version: [ 1.23 ]
+        os: [ ubuntu-latest]
     needs: [tests, builds]
     runs-on:  ${{ matrix.os }}
     steps:
@@ -76,7 +76,7 @@ jobs:
           		--clean --config .goreleaser-Linux.yml
         env:
           PACKAGE_NAME: github.com/AndriyKalashnykov/go-httpbin
-          GOLANG_CROSS_VERSION: v1.22
+          GOLANG_CROSS_VERSION: v1.23
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run GoReleaser MacOS
@@ -93,7 +93,7 @@ jobs:
           		--clean --config .goreleaser-Darwin-cross.yml
         env:
           PACKAGE_NAME: github.com/AndriyKalashnykov/go-httpbin
-          GOLANG_CROSS_VERSION: v1.22
+          GOLANG_CROSS_VERSION: v1.23
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   release-docker-images:
