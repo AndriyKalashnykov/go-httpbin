@@ -2,7 +2,7 @@
 CURRENTTAG:=$(shell git describe --tags --abbrev=0)
 NEWTAG ?= $(shell bash -c 'read -p "Please provide a new tag (currnet tag - ${CURRENTTAG}): " newtag; echo $$newtag')
 GOFLAGS=-mod=mod
-GO_BUILDER_VERSION=v1.22
+GO_BUILDER_VERSION=v1.23.2
 OSXCROSS_PATH=/opt/osxcross-clang-17.0.3-macosx-14.0/target/bin
 
 IS_DARWIN := 0
@@ -79,7 +79,7 @@ run:
 get:
 	@export GOFLAGS=$(GOFLAGS); go get . ; go mod tidy
 
-test-release: clean
+test-release-linux: clean
 	docker run --rm --privileged \
 		-v $(CURDIR):/golang-cross-example \
 		-v /var/run/docker.sock:/var/run/docker.sock \
@@ -87,6 +87,7 @@ test-release: clean
 		-w /golang-cross-example \
 		ghcr.io/gythialy/golang-cross:$(GO_BUILDER_VERSION) --skip=publish --clean --snapshot --config .goreleaser-Linux.yml
 
+test-release-darwin: clean
 	docker run --rm --privileged \
 		-v $(CURDIR):/golang-cross-example \
 		-v /var/run/docker.sock:/var/run/docker.sock \
