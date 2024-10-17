@@ -61,7 +61,7 @@ help:
 
 #clean: @ Cleanup
 clean:
-	@sudo rm -rf ./dist
+	@rm -rf ./dist
 
 #test: @ Run tests
 test:
