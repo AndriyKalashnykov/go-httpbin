@@ -1,6 +1,6 @@
 module github.com/AndriyKalashnykov/go-httpbin
 
-go 1.23.2
+go 1.25.1
 
 require (
 	github.com/andybalholm/brotli v1.2.0
