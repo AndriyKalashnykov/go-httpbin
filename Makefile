@@ -121,6 +121,6 @@ update:
 version:
 	@echo $(shell git describe --tags --abbrev=0)
 
-#image-build: @ Build a Docker image
-image-build:
+#image: @ Build a Docker image
+image:
 	docker build -t go-httpbin:$(CURRENTTAG) .
