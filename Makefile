@@ -5,6 +5,9 @@ GOFLAGS=-mod=mod
 GO_BUILDER_VERSION=v1.23.2
 OSXCROSS_PATH=/opt/osxcross-clang-17.0.3-macosx-14.0/target/bin
 
+# Semver regex for release validation
+SEMVER_REGEX := ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$$
+
 IS_DARWIN := 0
 IS_LINUX := 0
 IS_FREEBSD := 0
@@ -52,6 +55,8 @@ else
 	endif
 endif
 
+.PHONY: help clean test build run get test-release-linux test-release-darwin release update version image deps lint ci
+
 #help: @ List available tasks
 help:
 	@clear
@@ -63,9 +68,21 @@ help:
 clean:
 	@rm -rf ./dist
 
+#deps: @ Check required dependencies
+deps:
+	@command -v go >/dev/null 2>&1 || { echo "ERROR: go is not installed"; exit 1; }
+	@command -v git >/dev/null 2>&1 || { echo "ERROR: git is not installed"; exit 1; }
+	@command -v docker >/dev/null 2>&1 || { echo "ERROR: docker is not installed"; exit 1; }
+	@command -v golangci-lint >/dev/null 2>&1 || { echo "ERROR: golangci-lint is not installed"; exit 1; }
+	@echo "All dependencies are available."
+
 #test: @ Run tests
 test:
 	@export GOFLAGS=$(GOFLAGS); go test $(go list ./...)
+
+#lint: @ Run linter
+lint:
+	@golangci-lint run ./...
 
 #build: @ Build binary
 build:
@@ -80,7 +97,7 @@ get:
 	@export GOFLAGS=$(GOFLAGS); go get . ; go mod tidy
 
 test-release-linux: clean
-	docker run --rm --privileged \
+	@docker run --rm --privileged \
 		-v $(CURDIR):/golang-cross-example \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v $(GOPATH)/src:/go/src \
@@ -88,22 +105,20 @@ test-release-linux: clean
 		ghcr.io/gythialy/golang-cross:$(GO_BUILDER_VERSION) --skip=publish --clean --snapshot --config .goreleaser-Linux.yml
 
 test-release-darwin: clean
-	docker run --rm --privileged \
+	@docker run --rm --privileged \
 		-v $(CURDIR):/golang-cross-example \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v $(GOPATH)/src:/go/src \
 		-w /golang-cross-example \
 		ghcr.io/gythialy/golang-cross:$(GO_BUILDER_VERSION) --skip=publish --clean --snapshot --config .goreleaser-Darwin-cross.yml
-#ifeq ($(IS_LINUX), 1)
-#	export PATH=$(OSXCROSS_PATH):${PATH} && goreleaser --skip=publish --clean --snapshot --config .goreleaser-Linux.yml && goreleaser --skip=publish --clean --snapshot --config .goreleaser-Darwin-cross.yml
-#endif
-#ifeq ($(IS_DARWIN), 1)
-#	export PATH=$(OSXCROSS_PATH):${PATH} && goreleaser --skip=publish --clean --snapshot --config .goreleaser-Darwin.yml
-#endif
 
 #release: @ Create and push a new tag
 release: build
 	$(eval NT=$(NEWTAG))
+	@if ! echo "$(NT)" | grep -qE '$(SEMVER_REGEX)'; then \
+		echo "ERROR: '$(NT)' is not a valid semver tag (expected format: vX.Y.Z[-prerelease])"; \
+		exit 1; \
+	fi
 	@echo -n "Are you sure to create and push ${NT} tag? [y/N] " && read ans && [ $${ans:-N} = y ]
 	@echo ${NT} > ./version.txt
 	@git add -A
@@ -121,6 +136,10 @@ update:
 version:
 	@echo $(shell git describe --tags --abbrev=0)
 
+#ci: @ Run all CI checks locally
+ci: deps lint test build
+	@echo "All CI checks passed."
+
 #image: @ Build a Docker image
 image:
-	docker build -t go-httpbin:$(CURRENTTAG) .
+	@docker build -t go-httpbin:$(CURRENTTAG) .
