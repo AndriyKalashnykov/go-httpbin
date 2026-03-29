@@ -1,4 +1,4 @@
-name: ci
+name: CI
 
 on:
   push:
@@ -8,83 +8,54 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: true
 
 permissions:
-  contents: write
-  packages: write
+  contents: read
 
 jobs:
 
-  setup:
+  ci:
     runs-on: ubuntu-latest
-    outputs:
-      go-version: ${{ steps.go-version.outputs.version }}
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Test
+        run: make test
+
+      - name: Build
+        run: make build
+
+  release-binaries:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [ci]
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
 
       - name: Extract Go version from go.mod
         id: go-version
         run: |
           GO_VERSION=$(grep -E '^go [0-9]+\.[0-9]+' go.mod | awk '{print $2}' | cut -d. -f1,2)
           echo "version=v${GO_VERSION}" >> $GITHUB_OUTPUT
-
-  builds:
-
-    timeout-minutes: 10
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          fetch-depth: 0
-
-      - name: Set up Go
-        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6
-        with:
-          go-version-file: 'go.mod'
-          cache: true
-
-      - name: Build
-        run: make build
-
-  tests:
-    needs: [ builds ]
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        name: [unit]
-
-    runs-on: ${{ matrix.os }}
-    name: test (${{ matrix.name }}, ${{ matrix.os }})
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      - name: Set up Go
-        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6
-        with:
-          go-version-file: 'go.mod'
-          cache: true
-
-      - name: Run [${{ matrix.name }} - ${{ matrix.os }}] tests
-        run: make test
-
-  release-binaries:
-
-    if: github.ref_type == 'tag'
-    needs: [ setup, tests, builds]
-    strategy:
-      matrix:
-        os: [ ubuntu-latest]
-    runs-on:  ${{ matrix.os }}
-    steps:
-      - name: Checkout
-        id: checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          fetch-depth: 0
 
       - name: Run GoReleaser Linux
         run: |
@@ -100,7 +71,7 @@ jobs:
           		--clean --config .goreleaser-Linux.yml
         env:
           PACKAGE_NAME: github.com/AndriyKalashnykov/go-httpbin
-          GOLANG_CROSS_VERSION: ${{ needs.setup.outputs.go-version }}
+          GOLANG_CROSS_VERSION: ${{ steps.go-version.outputs.version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run GoReleaser MacOS
@@ -117,13 +88,12 @@ jobs:
           		--clean --config .goreleaser-Darwin-cross.yml
         env:
           PACKAGE_NAME: github.com/AndriyKalashnykov/go-httpbin
-          GOLANG_CROSS_VERSION: ${{ needs.setup.outputs.go-version }}
+          GOLANG_CROSS_VERSION: ${{ steps.go-version.outputs.version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   release-docker-images:
-
-    if: github.ref_type == 'tag'
-    needs: [ tests, builds ]
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [ci]
     timeout-minutes: 10
     runs-on: ubuntu-latest
     env:
@@ -172,9 +142,9 @@ jobs:
         images: ghcr.io/${{ env.OWNER_LC }}/go-httpbin
         flavor: latest=true
         tags: |
-          type=ref,event=branch
-          type=ref,event=pr
           type=semver,pattern=v{{version}}
+          type=semver,pattern=v{{major}}.{{minor}}
+          type=semver,pattern=v{{major}}
 
     - name: Build and push
       uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
@@ -182,7 +152,7 @@ jobs:
         context: .
         file: ./Dockerfile
         platforms: linux/amd64
-        push: ${{ github.ref_type == 'tag' }}
+        push: true
         cache-from: type=local,src=/tmp/.buildx-cache
         cache-to: type=local,dest=/tmp/.buildx-cache
         tags: ${{ steps.meta.outputs.tags }}

@@ -6,10 +6,10 @@ go-httpbin is a Go library and HTTP server that provides [httpbin.org](http://ht
 
 ## Tech Stack
 
-- **Language**: Go 1.26
+- **Language**: Go (version from go.mod)
 - **Router**: gorilla/mux
 - **Testing**: go test + testify
-- **Linting**: golangci-lint
+- **Linting**: golangci-lint + hadolint (Dockerfile)
 - **Container**: Multi-stage Docker build (golang alpine -> scratch)
 - **CI**: GitHub Actions
 - **Dependencies**: Renovate (auto-merge all update types)
@@ -19,14 +19,16 @@ go-httpbin is a Go library and HTTP server that provides [httpbin.org](http://ht
 ```bash
 make build       # Build binary (CGO_ENABLED=0)
 make test        # Run tests
-make lint        # Run golangci-lint
+make lint        # Run golangci-lint + hadolint
 make ci          # Run all CI checks: deps, lint, test, build
+make ci-run      # Run GitHub Actions workflow locally via act
 make clean       # Remove dist directory
-make deps        # Verify required tools are installed
+make deps        # Install and verify required tools
+make deps-check  # Show required Go versions and gvm status
 make run         # Run the server locally on :8080
 make get         # Download and tidy dependencies
 make update      # Update dependencies to latest versions
-make image       # Build Docker image
+make image-build # Build Docker image
 make release     # Create and push a new semver tag
 make version     # Print current version tag
 ```
@@ -40,7 +42,7 @@ make version     # Print current version tag
 - `types.go` - Shared types
 - `util.go` - Utility functions
 - `Dockerfile` - Multi-stage container build
-- `.github/workflows/ci.yml` - CI pipeline (build, test, release binaries, Docker images)
+- `.github/workflows/ci.yml` - CI pipeline (test, build, release binaries, Docker images)
 - `.github/workflows/cleanup-runs.yml` - Weekly cleanup of old workflow runs
 
 ## CI/CD
@@ -49,11 +51,9 @@ The CI workflow (`ci.yml`) runs on push to main, tags, and pull requests:
 
 | Job | Trigger | Description |
 |-----|---------|-------------|
-| `setup` | all | Extracts Go version from go.mod |
-| `builds` | all | Builds the binary via `make build` |
-| `tests` | all (after builds) | Runs `make test` on ubuntu-latest |
+| `ci` | all | Test, Build via Makefile targets |
 | `release-binaries` | tags only | Cross-compiles via GoReleaser (Linux + macOS) |
-| `release-docker-images` | tags only | Builds and pushes multi-arch Docker image to GHCR |
+| `release-docker-images` | tags only | Builds and pushes Docker image to GHCR |
 
 The cleanup workflow (`cleanup-runs.yml`) runs weekly (Sunday midnight) to delete workflow runs older than 7 days, keeping a minimum of 5 runs.
 
@@ -63,6 +63,8 @@ The cleanup workflow (`cleanup-runs.yml`) runs weekly (Sunday midnight) to delet
 - Binary output: `go-httpbin` in project root
 - Tests use testify for assertions
 - All CI steps delegate to Makefile targets
+- Tool versions pinned in Makefile (golangci-lint, act, hadolint, nvm)
+- gvm used for local Go version management; CI uses actions/setup-go
 
 ## Skills
 

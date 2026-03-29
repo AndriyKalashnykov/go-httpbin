@@ -1,14 +1,39 @@
 [![CI](https://github.com/AndriyKalashnykov/go-httpbin/actions/workflows/ci.yml/badge.svg)](https://github.com/AndriyKalashnykov/go-httpbin/actions/workflows/ci.yml)
 [![Hits](https://hits.sh/github.com/AndriyKalashnykov/go-httpbin.svg?view=today-total&style=plastic)](https://hits.sh/github.com/AndriyKalashnykov/go-httpbin/)
-[![License](https://img.shields.io/badge/License-Apache%202.0-brightgreen.svg)](https://opensource.org/licenses/Apache-2.0)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-brightgreen.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Renovate enabled](https://img.shields.io/badge/renovate-enabled-brightgreen.svg)](https://app.renovatebot.com/dashboard#github/AndriyKalashnykov/go-httpbin)
-[![Read GoDoc](https://godoc.org/github.com/AndriyKalashnykov/go-httpbin?status.svg)](https://godoc.org/github.com/AndriyKalashnykov/go-httpbin)
+[![GoDoc](https://pkg.go.dev/badge/github.com/AndriyKalashnykov/go-httpbin)](https://pkg.go.dev/github.com/AndriyKalashnykov/go-httpbin)
+
 # go-httpbin
 
 A Go handler that lets you test your HTTP client, retry logic, streaming behavior, timeouts etc.
 with the endpoints of [httpbin.org](http://httpbin.org) locally in a [net/http/httptest.Server](https://pkg.go.dev/net/http/httptest).
+This way, you can write tests without relying on an external dependency like httpbin.org.
 
-This way, you can write tests without relying on an external dependency like [httpbin.org].
+## Quick Start
+
+```bash
+make deps      # install and verify required tools
+make build     # build the binary
+make test      # run tests
+make run       # start the server on :8080
+```
+
+## Prerequisites
+
+| Tool | Version | Purpose |
+|------|---------|---------|
+| [Go](https://go.dev/dl/) | 1.26+ | Language runtime and compiler |
+| [GNU Make](https://www.gnu.org/software/make/) | 3.81+ | Build orchestration |
+| [Docker](https://www.docker.com/) | latest | Container builds and GoReleaser |
+| [golangci-lint](https://golangci-lint.run/) | 2.1.6+ | Go linter (auto-installed by `make deps`) |
+| [gvm](https://github.com/moovweb/gvm) | latest | Go version management (optional) |
+
+Install all required dependencies:
+
+```bash
+make deps
+```
 
 ## Endpoints
 
@@ -42,8 +67,6 @@ This way, you can write tests without relying on an external dependency like [ht
 - `/image/gif` Returns page containing an animated GIF image.
 - `/image/png` Returns page containing a PNG image.
 - `/image/jpeg` Returns page containing a JPEG image.
-
-
 
 ## How to use
 
@@ -96,3 +119,59 @@ go-httpbin works from the command line as well:
 $ go install github.com/AndriyKalashnykov/go-httpbin/cmd/httpbin
 $ $GOPATH/bin/httpbin -host :8080
 ```
+
+## Available Make Targets
+
+Run `make help` to see all available targets.
+
+### Build & Run
+
+| Target | Description |
+|--------|-------------|
+| `make build` | Build binary |
+| `make run` | Run binary |
+| `make clean` | Cleanup |
+| `make get` | Download and install dependency packages |
+| `make update` | Update dependencies to latest versions |
+
+### Code Quality
+
+| Target | Description |
+|--------|-------------|
+| `make lint` | Run linter (golangci-lint + hadolint) |
+| `make test` | Run tests |
+
+### CI
+
+| Target | Description |
+|--------|-------------|
+| `make ci` | Run all CI checks locally (deps, lint, test, build) |
+| `make ci-run` | Run GitHub Actions workflow locally using [act](https://github.com/nektos/act) |
+
+### Docker
+
+| Target | Description |
+|--------|-------------|
+| `make image-build` | Build Docker image |
+
+### Utilities
+
+| Target | Description |
+|--------|-------------|
+| `make deps` | Install and verify required dependencies |
+| `make deps-check` | Show required Go versions and gvm status |
+| `make version` | Print current version (tag) |
+| `make release` | Create and push a new tag |
+| `make renovate-validate` | Validate Renovate configuration |
+
+## CI/CD
+
+GitHub Actions runs on every push to `main`, tags `v*`, and pull requests.
+
+| Job | Triggers | Steps |
+|-----|----------|-------|
+| **ci** | push, PR, tags | Test, Build |
+| **release-binaries** | tags only | Cross-compile via GoReleaser (Linux + macOS) |
+| **release-docker-images** | tags only | Build and push Docker image to GHCR |
+
+[Renovate](https://docs.renovatebot.com/) keeps dependencies up to date with platform automerge enabled.
