@@ -55,7 +55,7 @@ else
 	endif
 endif
 
-.PHONY: help clean test build run get test-release-linux test-release-darwin release update version image deps lint ci
+.PHONY: help clean test build run get test-release-linux test-release-darwin release update version image deps lint ci renovate-bootstrap renovate-validate
 
 #help: @ List available tasks
 help:
@@ -143,3 +143,19 @@ ci: deps lint test build
 #image: @ Build a Docker image
 image:
 	@docker build -t go-httpbin:$(CURRENTTAG) .
+
+NVM_VERSION := 0.40.4
+
+#renovate-bootstrap: @ Install nvm and npm for Renovate
+renovate-bootstrap:
+	@command -v node >/dev/null 2>&1 || { \
+		echo "Installing nvm $(NVM_VERSION)..."; \
+		curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v$(NVM_VERSION)/install.sh | bash; \
+		export NVM_DIR="$$HOME/.nvm"; \
+		[ -s "$$NVM_DIR/nvm.sh" ] && . "$$NVM_DIR/nvm.sh"; \
+		nvm install --lts; \
+	}
+
+#renovate-validate: @ Validate Renovate configuration
+renovate-validate: renovate-bootstrap
+	@npx --yes renovate --platform=local
