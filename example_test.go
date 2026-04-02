@@ -2,7 +2,7 @@ package httpbin_test
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -16,12 +16,12 @@ func ExampleGetMux_httptest() {
 
 	resp, err := http.Get(srv.URL + "/bytes/65536")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err) //nolint:gocritic // standard example pattern
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // example code
 
 	// read from an actual HTTP server hosted locally
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal(err)
 	}

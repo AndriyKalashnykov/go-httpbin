@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -48,7 +47,7 @@ func noFollowGet(cl *http.Client, u string) (*http.Response, error) {
 }
 
 func noFollow(method string, cl *http.Client, u string) (*http.Response, error) {
-	req, err := http.NewRequest(method, u, nil)
+	req, err := http.NewRequest(method, u, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: method=%s url=%q error=%v", method, u, err)
 	}
@@ -62,27 +61,27 @@ func noFollow(method string, cl *http.Client, u string) (*http.Response, error) 
 	return resp, nil
 }
 
-func get(t *testing.T, url string) []byte {
-	return req(t, url, "GET", nil)
+func get(t *testing.T, reqURL string) []byte {
+	return req(t, reqURL, "GET", nil)
 }
 
-func post(t *testing.T, url string, body []byte) []byte {
-	return req(t, url, "POST", body)
+func post(t *testing.T, reqURL string, body []byte) []byte {
+	return req(t, reqURL, "POST", body)
 }
 
-func req(t *testing.T, url, method string, body []byte) []byte {
+func req(t *testing.T, reqURL, method string, body []byte) []byte {
 	cl := &http.Client{}
 
-	r, err := http.NewRequest(method, url, bytes.NewReader(body))
+	r, err := http.NewRequest(method, reqURL, bytes.NewReader(body))
 	require.Nil(t, err, "cannot create request")
 
 	resp, err := cl.Do(r)
 	require.Nil(t, err, "request failed")
 
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // test cleanup
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	require.Nil(t, err, "failed to read response body")
 	return b
 }
@@ -336,14 +335,14 @@ func TestStream(t *testing.T) {
 	defer srv.Close()
 
 	orig := httpbin.StreamInterval
-	new := time.Millisecond * 100
-	httpbin.StreamInterval = new
+	interval := time.Millisecond * 100
+	httpbin.StreamInterval = interval
 	defer func() { httpbin.StreamInterval = orig }()
 
 	total := 10
 	resp, err := http.Get(srv.URL + fmt.Sprintf("/stream/%d", total))
 	require.Nil(t, err, "request failed")
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // test cleanup
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
 	dec := json.NewDecoder(resp.Body)
@@ -365,7 +364,7 @@ func TestStream(t *testing.T) {
 			lastMsg = time.Now()
 		} else {
 			elapsedMs := time.Since(lastMsg).Seconds() * 1000
-			require.InDelta(t, int(new/time.Millisecond), int(elapsedMs), 20, "time since last msg=%dms", elapsedMs)
+			require.InDelta(t, int(interval/time.Millisecond), int(elapsedMs), 20, "time since last msg=%dms", elapsedMs)
 			lastMsg = time.Now()
 		}
 		n++
@@ -388,10 +387,10 @@ func TestCookies(t *testing.T) {
 	cl := &http.Client{Jar: cj}
 	resp, err := cl.Get(srv.URL + "/cookies")
 	require.Nil(t, err)
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // test cleanup
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	require.Nil(t, err)
 
 	var v struct {
@@ -414,7 +413,7 @@ func TestSetCookies(t *testing.T) {
 	cl.Jar = cj
 	resp, err := noFollowGet(cl, srv.URL+"/cookies/set?k1=v1&k2=v2")
 	require.Nil(t, err)
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // test cleanup
 	require.Equal(t, http.StatusFound, resp.StatusCode)
 	require.Equal(t, "/cookies", resp.Header.Get("Location"))
 
@@ -443,7 +442,7 @@ func TestDeleteCookies(t *testing.T) {
 	cl.Jar = cj
 	resp, err := noFollowGet(cl, srv.URL+"/cookies/delete?k1&k2")
 	require.Nil(t, err)
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // test cleanup
 	require.Equal(t, http.StatusFound, resp.StatusCode)
 	require.Equal(t, "/cookies", resp.Header.Get("Location"))
 
@@ -452,7 +451,7 @@ func TestDeleteCookies(t *testing.T) {
 		cs = append(cs, c.String())
 	}
 	Version := runtime.Version()
-	Version = strings.Replace(Version, "go1.", "", -1)
+	Version = strings.ReplaceAll(Version, "go1.", "")
 	VerNumb, _ := strconv.ParseFloat(Version, 64)
 	if VerNumb >= 8 {
 		require.NotContains(t, cs, "k1=")
@@ -475,9 +474,9 @@ func TestDrip_code(t *testing.T) {
 
 	resp, err := http.Get(srv.URL + "/drip?numbytes=10&duration=0.1&code=500")
 	require.Nil(t, err)
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // test cleanup
 	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	require.Nil(t, err)
 	require.Equal(t, bytes.Repeat([]byte{'*'}, 10), b)
 }
@@ -486,11 +485,11 @@ func TestCache_ifModifiedSince(t *testing.T) {
 	srv := testServer()
 	defer srv.Close()
 
-	req, _ := http.NewRequest("GET", srv.URL+"/cache", nil)
+	req, _ := http.NewRequest("GET", srv.URL+"/cache", http.NoBody)
 	req.Header.Set("If-Modified-Since", "Sat, 29 Oct 1994 19:43:31 GMT")
 	resp, err := http.DefaultClient.Do(req)
 	require.Nil(t, err)
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // test cleanup
 	require.Equal(t, http.StatusNotModified, resp.StatusCode)
 	require.EqualValues(t, 0, resp.ContentLength)
 }
@@ -499,11 +498,11 @@ func TestCache_ifNoneMatch(t *testing.T) {
 	srv := testServer()
 	defer srv.Close()
 
-	req, _ := http.NewRequest("GET", srv.URL+"/cache", nil)
+	req, _ := http.NewRequest("GET", srv.URL+"/cache", http.NoBody)
 	req.Header.Set("If-None-Match", "some-etag")
 	resp, err := http.DefaultClient.Do(req)
 	require.Nil(t, err)
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // test cleanup
 	require.Equal(t, http.StatusNotModified, resp.StatusCode)
 	require.EqualValues(t, 0, resp.ContentLength)
 }
@@ -514,7 +513,7 @@ func TestCache_none(t *testing.T) {
 
 	resp, err := http.Get(srv.URL + "/cache")
 	require.Nil(t, err)
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // test cleanup
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 	require.NotEqual(t, int64(0), resp.ContentLength)
 }
@@ -525,7 +524,7 @@ func TestSetCache_none(t *testing.T) {
 
 	resp, err := http.Get(srv.URL + "/cache/5")
 	require.Nil(t, err)
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // test cleanup
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 	require.Equal(t, "public, max-age=5", resp.Header.Get("Cache-Control"), "Cache-Control header")
 	require.NotEqual(t, int64(0), resp.ContentLength)
@@ -536,13 +535,13 @@ func TestGZIP(t *testing.T) {
 	defer srv.Close()
 
 	client := new(http.Client)
-	req, err := http.NewRequest("GET", srv.URL+"/gzip", nil)
+	req, err := http.NewRequest("GET", srv.URL+"/gzip", http.NoBody)
 	require.Nil(t, err)
 
 	req.Header.Add("Accept-Encoding", "gzip")
 	resp, err := client.Do(req)
 	require.Nil(t, err)
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // test cleanup
 
 	require.EqualValues(t, "gzip", resp.Header.Get("Content-Encoding"))
 	require.EqualValues(t, "application/json", resp.Header.Get("Content-Type"))
@@ -562,7 +561,7 @@ func TestDeflate(t *testing.T) {
 
 	resp, err := http.Get(srv.URL + "/deflate")
 	require.Nil(t, err)
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // test cleanup
 
 	require.EqualValues(t, "deflate", resp.Header.Get("Content-Encoding"))
 
@@ -571,7 +570,7 @@ func TestDeflate(t *testing.T) {
 	}
 
 	rr := flate.NewReader(resp.Body)
-	defer rr.Close()
+	defer rr.Close() //nolint:errcheck // test cleanup
 	require.Nil(t, json.NewDecoder(rr).Decode(&v))
 	require.True(t, v.Deflated)
 }
@@ -581,13 +580,13 @@ func TestBrotli(t *testing.T) {
 	defer srv.Close()
 
 	client := new(http.Client)
-	req, err := http.NewRequest("GET", srv.URL+"/brotli", nil)
+	req, err := http.NewRequest("GET", srv.URL+"/brotli", http.NoBody)
 	require.Nil(t, err)
 
 	req.Header.Add("Accept-Encoding", "br")
 	resp, err := client.Do(req)
 	require.Nil(t, err)
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // test cleanup
 
 	require.EqualValues(t, "br", resp.Header.Get("Content-Encoding"))
 	require.EqualValues(t, "application/json", resp.Header.Get("Content-Type"))
@@ -606,9 +605,9 @@ func TestRobotsTXT(t *testing.T) {
 
 	resp, err := http.Get(srv.URL + "/robots.txt")
 	require.Nil(t, err)
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // test cleanup
 	require.EqualValues(t, "text/plain", resp.Header.Get("Content-Type"))
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	require.Nil(t, err)
 	require.EqualValues(t, "User-agent: *\nDisallow: /deny\n", string(b))
 }
@@ -619,7 +618,7 @@ func TestDeny(t *testing.T) {
 
 	resp, err := http.Get(srv.URL + "/deny")
 	require.Nil(t, err)
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // test cleanup
 	require.EqualValues(t, "text/plain", resp.Header.Get("Content-Type"))
 }
 
@@ -629,7 +628,7 @@ func TestBasicAuthHandler_noAuth(t *testing.T) {
 
 	resp, err := http.Get(srv.URL + "/basic-auth/foouser/foopass")
 	require.Nil(t, err)
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // test cleanup
 	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 }
 
@@ -637,11 +636,11 @@ func TestBasicAuthHandler_badCreds(t *testing.T) {
 	srv := testServer()
 	defer srv.Close()
 
-	req, err := http.NewRequest("GET", srv.URL+"/basic-auth/foouser/foopass", nil)
+	req, _ := http.NewRequest("GET", srv.URL+"/basic-auth/foouser/foopass", http.NoBody)
 	req.SetBasicAuth("wronguser", "wrongpass")
 	resp, err := http.DefaultClient.Do(req)
 	require.Nil(t, err)
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // test cleanup
 	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 }
 
@@ -649,11 +648,11 @@ func TestBasicAuthHandler_correctCreds(t *testing.T) {
 	srv := testServer()
 	defer srv.Close()
 
-	req, err := http.NewRequest("GET", srv.URL+"/basic-auth/foouser/foopass", nil)
+	req, _ := http.NewRequest("GET", srv.URL+"/basic-auth/foouser/foopass", http.NoBody)
 	req.SetBasicAuth("foouser", "foopass")
 	resp, err := http.DefaultClient.Do(req)
 	require.Nil(t, err)
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // test cleanup
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
 	type tt struct {
@@ -671,7 +670,7 @@ func TestHiddenBasicAuthHandler_noAuth(t *testing.T) {
 
 	resp, err := http.Get(srv.URL + "/hidden-basic-auth/foouser/foopass")
 	require.Nil(t, err)
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // test cleanup
 	require.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
 
@@ -679,11 +678,11 @@ func TestHiddenBasicAuthHandler_badCreds(t *testing.T) {
 	srv := testServer()
 	defer srv.Close()
 
-	req, err := http.NewRequest("GET", srv.URL+"/hidden-basic-auth/foouser/foopass", nil)
+	req, _ := http.NewRequest("GET", srv.URL+"/hidden-basic-auth/foouser/foopass", http.NoBody)
 	req.SetBasicAuth("wronguser", "wrongpass")
 	resp, err := http.DefaultClient.Do(req)
 	require.Nil(t, err)
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // test cleanup
 	require.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
 
@@ -691,11 +690,11 @@ func TestHiddenBasicAuthHandler_correctCreds(t *testing.T) {
 	srv := testServer()
 	defer srv.Close()
 
-	req, err := http.NewRequest("GET", srv.URL+"/hidden-basic-auth/foouser/foopass", nil)
+	req, _ := http.NewRequest("GET", srv.URL+"/hidden-basic-auth/foouser/foopass", http.NoBody)
 	req.SetBasicAuth("foouser", "foopass")
 	resp, err := http.DefaultClient.Do(req)
 	require.Nil(t, err)
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // test cleanup
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
 	type tt struct {
@@ -713,9 +712,9 @@ func TestHTML(t *testing.T) {
 
 	resp, err := http.Get(srv.URL + "/html")
 	require.Nil(t, err)
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // test cleanup
 
-	doc, err := ioutil.ReadAll(resp.Body)
+	doc, err := io.ReadAll(resp.Body)
 	require.Nil(t, err)
 
 	require.Contains(t, string(doc), "Moby-Dick")
@@ -727,7 +726,7 @@ func TestXML(t *testing.T) {
 
 	resp, err := http.Get(srv.URL + "/xml")
 	require.Nil(t, err)
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // test cleanup
 
 	type slide struct {
 		Type  string `xml:"type,attr"`
@@ -761,7 +760,7 @@ func TestJPEG(t *testing.T) {
 
 	resp, err := http.Get(srv.URL + "/image/jpeg")
 	require.Nil(t, err)
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // test cleanup
 
 	require.EqualValues(t, http.StatusOK, resp.StatusCode)
 	require.EqualValues(t, "image/jpeg", resp.Header.Get("Content-Type"))
@@ -773,7 +772,7 @@ func TestGIF(t *testing.T) {
 
 	resp, err := http.Get(srv.URL + "/image/gif")
 	require.Nil(t, err)
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // test cleanup
 
 	require.EqualValues(t, http.StatusOK, resp.StatusCode)
 	require.EqualValues(t, "image/gif", resp.Header.Get("Content-Type"))
@@ -785,7 +784,7 @@ func TestPNG(t *testing.T) {
 
 	resp, err := http.Get(srv.URL + "/image/png")
 	require.Nil(t, err)
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // test cleanup
 
 	require.EqualValues(t, http.StatusOK, resp.StatusCode)
 	require.EqualValues(t, "image/png", resp.Header.Get("Content-Type"))

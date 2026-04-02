@@ -9,7 +9,7 @@ go-httpbin is a Go library and HTTP server that provides [httpbin.org](http://ht
 - **Language**: Go (version from go.mod)
 - **Router**: gorilla/mux
 - **Testing**: go test + testify
-- **Linting**: golangci-lint + hadolint (Dockerfile)
+- **Linting**: golangci-lint (includes gocritic via .golangci.yml) + hadolint (Dockerfile)
 - **Container**: Multi-stage Docker build (golang alpine -> scratch)
 - **CI**: GitHub Actions
 - **Dependencies**: Renovate (auto-merge all update types)
@@ -17,20 +17,29 @@ go-httpbin is a Go library and HTTP server that provides [httpbin.org](http://ht
 ## Build & Test Commands
 
 ```bash
-make build       # Build binary (CGO_ENABLED=0)
-make test        # Run tests
-make lint        # Run golangci-lint + hadolint
-make ci          # Run all CI checks: deps, lint, test, build
-make ci-run      # Run GitHub Actions workflow locally via act
-make clean       # Remove dist directory
-make deps        # Install and verify required tools
-make deps-check  # Show required Go versions and gvm status
-make run         # Run the server locally on :8080
-make get         # Download and tidy dependencies
-make update      # Update dependencies to latest versions
-make image-build # Build Docker image
-make release     # Create and push a new semver tag
-make version     # Print current version tag
+make help             # List available tasks
+make build            # Build binary (CGO_ENABLED=0)
+make test             # Run tests
+make format           # Check Go source formatting
+make lint             # Run golangci-lint + hadolint
+make coverage-check   # Run tests with coverage and verify threshold
+make ci               # Run all CI checks: format, lint, test, coverage, build
+make ci-run           # Run GitHub Actions workflow locally via act
+make clean            # Remove dist directory
+make deps             # Install and verify required tools (auto-installs gvm)
+make deps-check       # Show required Go versions and gvm status
+make deps-act         # Install act for local CI
+make deps-hadolint    # Install hadolint for Dockerfile linting
+make deps-renovate    # Install nvm and npm for Renovate
+make run              # Run the server locally on :8080
+make get              # Download and tidy dependencies
+make update           # Update dependencies to latest versions
+make image-build      # Build Docker image
+make test-release-linux   # Test GoReleaser Linux build
+make test-release-darwin  # Test GoReleaser Darwin build
+make release          # Create and push a new semver tag
+make version          # Print current version tag
+make renovate-validate    # Validate Renovate configuration
 ```
 
 ## Project Structure
@@ -38,22 +47,28 @@ make version     # Print current version tag
 - `cmd/httpbin/main.go` - CLI entry point
 - `handlers.go` - HTTP handler implementations
 - `handlers_test.go` - Handler tests
+- `example_test.go` - Example usage test
 - `data.go` - Embedded response data
 - `types.go` - Shared types
 - `util.go` - Utility functions
+- `.golangci.yml` - golangci-lint config (includes gocritic with all tags)
 - `Dockerfile` - Multi-stage container build
-- `.github/workflows/ci.yml` - CI pipeline (test, build, release binaries, Docker images)
+- `.github/workflows/ci.yml` - CI pipeline (lint, build, test, release binaries, Docker images)
 - `.github/workflows/cleanup-runs.yml` - Weekly cleanup of old workflow runs
 
 ## CI/CD
 
-The CI workflow (`ci.yml`) runs on push to main, tags, and pull requests:
+The CI workflow (`ci.yml`) runs on push to main, tags, pull requests, and workflow_call:
 
 | Job | Trigger | Description |
 |-----|---------|-------------|
-| `ci` | all | Test, Build via Makefile targets |
+| `static-check` | all | Lint via `make lint` (golangci-lint + hadolint) |
+| `build` | after static-check | Build via `make build` |
+| `test` | after static-check | Test via `make test` |
 | `release-binaries` | tags only | Cross-compiles via GoReleaser (Linux + macOS) |
 | `release-docker-images` | tags only | Builds and pushes Docker image to GHCR |
+
+Note: The GitHub Actions CI splits lint, build, and test into separate parallel jobs (build and test run in parallel after static-check). The local `make ci` target runs the full pipeline sequentially: format, lint, test, coverage-check, build.
 
 The cleanup workflow (`cleanup-runs.yml`) runs weekly (Sunday midnight) to delete workflow runs older than 7 days, keeping a minimum of 5 runs.
 
@@ -63,7 +78,7 @@ The cleanup workflow (`cleanup-runs.yml`) runs weekly (Sunday midnight) to delet
 - Binary output: `go-httpbin` in project root
 - Tests use testify for assertions
 - All CI steps delegate to Makefile targets
-- Tool versions pinned in Makefile (golangci-lint, act, hadolint, nvm)
+- Tool versions pinned in Makefile (golangci-lint, act, hadolint, nvm, gvm SHA)
 - gvm used for local Go version management; CI uses actions/setup-go
 
 ## Skills

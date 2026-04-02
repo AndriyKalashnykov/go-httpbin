@@ -2,8 +2,12 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:best-practices",
-    ":semanticCommitType(chore)",
-    ":separatePatchReleases"
+    ":semanticCommitType(chore)"
+  ],
+  "enabledManagers": [
+    "gomod",
+    "github-actions",
+    "dockerfile"
   ],
   "postUpdateOptions": [
     "gomodTidy"
@@ -54,11 +58,11 @@
       "rangeStrategy": "bump"
     },
     {
-      "description": "Block echo v5 until echo-swagger supports it",
+      "description": "Group golang.org/x/* modules into one PR",
       "matchPackageNames": [
-        "github.com/labstack/echo/v5"
+        "/^golang\\.org\\/x\\///"
       ],
-      "enabled": false
+      "groupName": "golang.org/x modules"
     },
     {
       "description": "Group Docker base images",

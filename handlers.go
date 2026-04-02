@@ -13,7 +13,6 @@ import (
 	"image/jpeg"
 	"image/png"
 	"io"
-	"io/ioutil"
 	"math"
 	"math/rand"
 	"net"
@@ -374,8 +373,8 @@ func DripHandler(w http.ResponseWriter, r *http.Request) {
 			writeErrorJSON(w, errors.New("failed to parse 'delay'"))
 			return
 		}
-		delayMs := (time.Second / time.Millisecond) * time.Duration(delaySec)
-		time.Sleep(delayMs * time.Millisecond)
+		delay := (time.Second / time.Millisecond) * time.Duration(delaySec)
+		time.Sleep(delay * time.Millisecond)
 	}
 
 	t := time.Second * time.Duration(durationSec) / time.Duration(numBytes)
@@ -531,7 +530,7 @@ type circle struct {
 }
 
 func (c *circle) Brightness(x, y float64) uint8 {
-	var dx, dy float64 = c.X - x, c.Y - y
+	var dx, dy = c.X - x, c.Y - y
 	d := math.Sqrt(dx*dx+dy*dy) / c.R
 	if d > 1 {
 		return 0
@@ -542,8 +541,8 @@ func (c *circle) Brightness(x, y float64) uint8 {
 // GIFHandler returns an animated GIF image.
 // Source: http://tech.nitoyon.com/en/blog/2016/01/07/go-animated-gif-gen/
 func GIFHandler(rw http.ResponseWriter, r *http.Request) {
-	var w, h int = 240, 240
-	var hw, hh float64 = float64(w / 2), float64(h / 2)
+	var w, h = 240, 240
+	var hw, hh = float64(w / 2), float64(h / 2)
 	circles := []*circle{{}, {}, {}}
 
 	var palette = []color.Color{
@@ -671,9 +670,9 @@ func parseData(r *http.Request) ([]byte, error) {
 	if r.Body == nil {
 		return nil, nil
 	}
-	defer r.Body.Close()
+	defer r.Body.Close() //nolint:errcheck // best-effort close
 
-	data, err := ioutil.ReadAll(r.Body)
+	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
 	}

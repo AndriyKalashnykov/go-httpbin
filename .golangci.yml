@@ -1,0 +1,30 @@
+version: "2"
+
+linters:
+  default: standard
+  enable:
+    - gocritic
+
+  settings:
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+
+  exclusions:
+    rules:
+      # HTTP handler writes — errors are unrecoverable in this context
+      - linters: [errcheck]
+        text: "Error return value of `(fmt\\.Fprintf|fmt\\.Fprint|io\\.WriteString)` is not checked"
+      - linters: [errcheck]
+        text: "Error return value of `(w|rw)\\.Write` is not checked"
+      - linters: [errcheck]
+        text: "Error return value of `ww\\.Close` is not checked"
+      - linters: [errcheck]
+        text: "Error return value of `(gif\\.EncodeAll|jpeg\\.Encode|png\\.Encode)` is not checked"
+
+issues:
+  max-same-issues: 50

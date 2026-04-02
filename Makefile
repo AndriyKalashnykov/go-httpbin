@@ -9,7 +9,7 @@ GOLANGCI_VERSION := 2.1.6
 ACT_VERSION      := 0.2.87
 HADOLINT_VERSION := 2.12.0
 NVM_VERSION      := 0.40.4
-GO_BUILDER_VERSION := v1.23.2
+GVM_SHA          := dd652539fa4b771840846f8319fad303c7d0a8d2 # v1.0.22
 
 GOFLAGS        ?= -mod=mod
 GOOS           ?= linux
@@ -23,10 +23,13 @@ SEMVER_REGEX := ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$$
 GO_VERSIONS := $(shell find . -name 'go.mod' -exec grep -oP '^go \K[0-9.]+' {} \; | sort -uV)
 GO_VERSION  := $(shell grep -oP '^go \K[0-9.]+' go.mod)
 
+# GoReleaser cross-compile builder version (derived from go.mod)
+GO_BUILDER_VERSION := v$(shell grep -oP '^go \K[0-9]+\.[0-9]+' go.mod)
+
 # Helper: run a command under the correct Go version
 # In CI, actions/setup-go provides Go directly — gvm is not needed.
 # Locally, gvm sets GOROOT/GOPATH/PATH in a subshell.
-HAS_GVM := $(shell command -v gvm >/dev/null 2>&1 && echo true || echo false)
+HAS_GVM := $(shell [ -s "$$HOME/.gvm/scripts/gvm" ] && echo true || echo false)
 define go-exec
 $(if $(filter true,$(HAS_GVM)),bash -c '. $$GVM_ROOT/scripts/gvm && gvm use go$(GO_VERSION) >/dev/null && $(1)',bash -c '$(1)')
 endef
@@ -83,7 +86,7 @@ help:
 	@clear
 	@echo "Usage: make COMMAND"
 	@echo "Commands :"
-	@grep -E '[a-zA-Z\.\-]+:.*?@ .*$$' $(MAKEFILE_LIST)| tr -d '#' | awk 'BEGIN {FS = ":.*?@ "}; {printf "\033[32m%-22s\033[0m - %s\n", $$1, $$2}'
+	@grep -E '[a-zA-Z\.\-]+:.*?@ .*$$' $(MAKEFILE_LIST)| tr -d '#' | awk 'BEGIN {FS = ":.*?@ "}; {printf "\033[32m%-24s\033[0m - %s\n", $$1, $$2}'
 
 #clean: @ Cleanup
 clean:
@@ -91,6 +94,16 @@ clean:
 
 #deps: @ Install and verify required dependencies
 deps:
+	@# Install gvm if not present (local development only, CI uses actions/setup-go)
+	@if [ -z "$$CI" ] && [ ! -s "$$HOME/.gvm/scripts/gvm" ]; then \
+		echo "Installing gvm (Go Version Manager)..."; \
+		curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/$(GVM_SHA)/binscripts/gvm-installer | bash -s $(GVM_SHA); \
+		echo ""; \
+		echo "gvm installed. Please restart your shell or run:"; \
+		echo "  source $$HOME/.gvm/scripts/gvm"; \
+		echo "Then re-run 'make deps' to install Go $(GO_VERSION) via gvm."; \
+		exit 0; \
+	fi
 	@if [ "$(HAS_GVM)" = "true" ]; then \
 		for v in $(GO_VERSIONS); do \
 			bash -c '. $$GVM_ROOT/scripts/gvm && gvm list' 2>/dev/null | grep -q "go$$v" || { \
@@ -120,21 +133,46 @@ deps-act: deps
 		curl -sSfL https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash -s -- -b /usr/local/bin v$(ACT_VERSION); \
 	}
 
-deps-hadolint: #deps-hadolint: @ Install hadolint for Dockerfile linting
+#deps-hadolint: @ Install hadolint for Dockerfile linting
+deps-hadolint: deps
 	@command -v hadolint >/dev/null 2>&1 || { echo "Installing hadolint $(HADOLINT_VERSION)..."; \
 		curl -sSfL -o /tmp/hadolint https://github.com/hadolint/hadolint/releases/download/v$(HADOLINT_VERSION)/hadolint-Linux-x86_64 && \
 		install -m 755 /tmp/hadolint /usr/local/bin/hadolint && \
 		rm -f /tmp/hadolint; \
 	}
 
+#deps-renovate: @ Install nvm and npm for Renovate
+deps-renovate:
+	@command -v node >/dev/null 2>&1 || { \
+		echo "Installing nvm $(NVM_VERSION)..."; \
+		curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v$(NVM_VERSION)/install.sh | bash; \
+		export NVM_DIR="$$HOME/.nvm"; \
+		[ -s "$$NVM_DIR/nvm.sh" ] && . "$$NVM_DIR/nvm.sh"; \
+		nvm install --lts; \
+	}
+
 #test: @ Run tests
 test: deps
 	@$(call go-exec,export GOFLAGS=$(GOFLAGS) && go test ./...)
 
-#lint: @ Run linter
+#format: @ Check Go source formatting
+format: deps
+	@$(call go-exec,test -z "$$(gofmt -l .)" || { gofmt -l . && echo "Files above are not formatted. Run: gofmt -w ."; exit 1; })
+
+#lint: @ Run linter (golangci-lint + hadolint)
 lint: deps deps-hadolint
 	@$(call go-exec,golangci-lint run ./...)
 	@hadolint Dockerfile
+
+#coverage-check: @ Run tests with coverage and verify threshold
+coverage-check: deps
+	@$(call go-exec,export GOFLAGS=$(GOFLAGS) && go test -coverprofile=coverage.out ./...)
+	@COVERAGE=$$(go tool cover -func=coverage.out | grep total | awk '{print $$3}' | tr -d '%'); \
+		echo "Total coverage: $${COVERAGE}%"; \
+		RESULT=$$(echo "$${COVERAGE} < 80" | bc -l); \
+		if [ "$${RESULT}" -eq 1 ]; then \
+			echo "ERROR: Coverage $${COVERAGE}% is below 80% threshold"; exit 1; \
+		fi
 
 #build: @ Build binary
 build: deps
@@ -142,12 +180,13 @@ build: deps
 
 #run: @ Run binary
 run: deps
-	@export RPCENDPOINT=https://rpc.ankr.com/eth; $(call go-exec,export GOFLAGS=$(GOFLAGS) && go run ./cmd/httpbin/main.go)
+	@$(call go-exec,export GOFLAGS=$(GOFLAGS) && go run ./cmd/httpbin/main.go)
 
 #get: @ Download and install dependency packages
 get: deps
 	@$(call go-exec,export GOFLAGS=$(GOFLAGS) && go get . && go mod tidy)
 
+#test-release-linux: @ Test GoReleaser Linux build
 test-release-linux: clean
 	@docker run --rm --privileged \
 		-v $(CURDIR):/golang-cross-example \
@@ -156,6 +195,7 @@ test-release-linux: clean
 		-w /golang-cross-example \
 		ghcr.io/gythialy/golang-cross:$(GO_BUILDER_VERSION) --skip=publish --clean --snapshot --config .goreleaser-Linux.yml
 
+#test-release-darwin: @ Test GoReleaser Darwin build
 test-release-darwin: clean
 	@docker run --rm --privileged \
 		-v $(CURDIR):/golang-cross-example \
@@ -184,12 +224,12 @@ release: build
 update: deps
 	@$(call go-exec,export GOFLAGS=$(GOFLAGS) && go get -u ./... && go mod tidy)
 
-#version: @ Print current version(tag)
+#version: @ Print current version (tag)
 version:
 	@echo $(CURRENTTAG)
 
 #ci: @ Run all CI checks locally
-ci: deps lint test build
+ci: deps format lint test coverage-check build
 	@echo "All CI checks passed."
 
 #ci-run: @ Run GitHub Actions workflow locally using act
@@ -201,20 +241,10 @@ ci-run: deps-act
 image-build: build
 	@docker build -t $(APP_NAME):$(CURRENTTAG) .
 
-#renovate-bootstrap: @ Install nvm and npm for Renovate
-renovate-bootstrap:
-	@command -v node >/dev/null 2>&1 || { \
-		echo "Installing nvm $(NVM_VERSION)..."; \
-		curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v$(NVM_VERSION)/install.sh | bash; \
-		export NVM_DIR="$$HOME/.nvm"; \
-		[ -s "$$NVM_DIR/nvm.sh" ] && . "$$NVM_DIR/nvm.sh"; \
-		nvm install --lts; \
-	}
-
 #renovate-validate: @ Validate Renovate configuration
-renovate-validate: renovate-bootstrap
+renovate-validate: deps-renovate
 	@npx --yes renovate --platform=local
 
-.PHONY: help clean deps deps-check deps-act deps-hadolint test lint build run get \
-	test-release-linux test-release-darwin release update version ci ci-run \
-	image-build renovate-bootstrap renovate-validate
+.PHONY: help clean deps deps-check deps-act deps-hadolint deps-renovate test format lint \
+	coverage-check build run get test-release-linux test-release-darwin release update \
+	version ci ci-run image-build renovate-validate

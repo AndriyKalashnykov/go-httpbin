@@ -35,6 +35,63 @@ Install all required dependencies:
 make deps
 ```
 
+## Available Make Targets
+
+Run `make help` to see all available targets.
+
+### Build & Run
+
+| Target | Description |
+|--------|-------------|
+| `make build` | Build binary |
+| `make run` | Run binary |
+| `make clean` | Cleanup |
+| `make get` | Download and install dependency packages |
+| `make update` | Update dependencies to latest versions |
+
+### Code Quality
+
+| Target | Description |
+|--------|-------------|
+| `make format` | Check Go source formatting |
+| `make lint` | Run linter (golangci-lint + hadolint) |
+| `make test` | Run tests |
+| `make coverage-check` | Run tests with coverage and verify threshold |
+
+### CI
+
+| Target | Description |
+|--------|-------------|
+| `make ci` | Run all CI checks locally (format, lint, test, coverage, build) |
+| `make ci-run` | Run GitHub Actions workflow locally using [act](https://github.com/nektos/act) |
+
+### Docker
+
+| Target | Description |
+|--------|-------------|
+| `make image-build` | Build Docker image |
+
+### Release
+
+| Target | Description |
+|--------|-------------|
+| `make test-release-linux` | Test GoReleaser Linux build |
+| `make test-release-darwin` | Test GoReleaser Darwin build |
+| `make release` | Create and push a new tag |
+
+### Utilities
+
+| Target | Description |
+|--------|-------------|
+| `make help` | List available tasks |
+| `make deps` | Install and verify required dependencies |
+| `make deps-check` | Show required Go versions and gvm status |
+| `make deps-act` | Install act for local CI |
+| `make deps-hadolint` | Install hadolint for Dockerfile linting |
+| `make deps-renovate` | Install nvm and npm for Renovate |
+| `make version` | Print current version (tag) |
+| `make renovate-validate` | Validate Renovate configuration |
+
 ## Endpoints
 
 - `/ip` Returns Origin IP.
@@ -120,58 +177,18 @@ $ go install github.com/AndriyKalashnykov/go-httpbin/cmd/httpbin
 $ $GOPATH/bin/httpbin -host :8080
 ```
 
-## Available Make Targets
-
-Run `make help` to see all available targets.
-
-### Build & Run
-
-| Target | Description |
-|--------|-------------|
-| `make build` | Build binary |
-| `make run` | Run binary |
-| `make clean` | Cleanup |
-| `make get` | Download and install dependency packages |
-| `make update` | Update dependencies to latest versions |
-
-### Code Quality
-
-| Target | Description |
-|--------|-------------|
-| `make lint` | Run linter (golangci-lint + hadolint) |
-| `make test` | Run tests |
-
-### CI
-
-| Target | Description |
-|--------|-------------|
-| `make ci` | Run all CI checks locally (deps, lint, test, build) |
-| `make ci-run` | Run GitHub Actions workflow locally using [act](https://github.com/nektos/act) |
-
-### Docker
-
-| Target | Description |
-|--------|-------------|
-| `make image-build` | Build Docker image |
-
-### Utilities
-
-| Target | Description |
-|--------|-------------|
-| `make deps` | Install and verify required dependencies |
-| `make deps-check` | Show required Go versions and gvm status |
-| `make version` | Print current version (tag) |
-| `make release` | Create and push a new tag |
-| `make renovate-validate` | Validate Renovate configuration |
-
 ## CI/CD
 
 GitHub Actions runs on every push to `main`, tags `v*`, and pull requests.
 
 | Job | Triggers | Steps |
 |-----|----------|-------|
-| **ci** | push, PR, tags | Test, Build |
+| **static-check** | push, PR, tags | Lint (golangci-lint + hadolint) |
+| **build** | after static-check | Build binary |
+| **test** | after static-check | Run tests |
 | **release-binaries** | tags only | Cross-compile via GoReleaser (Linux + macOS) |
 | **release-docker-images** | tags only | Build and push Docker image to GHCR |
+
+The cleanup workflow (`cleanup-runs.yml`) runs weekly (Sunday midnight) to delete workflow runs older than 7 days, keeping a minimum of 5 runs.
 
 [Renovate](https://docs.renovatebot.com/) keeps dependencies up to date with platform automerge enabled.
