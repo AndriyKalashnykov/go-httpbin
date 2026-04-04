@@ -30,4 +30,5 @@ vendor
 .idea
 
 go-httpbin
+coverage.out
 dist/
