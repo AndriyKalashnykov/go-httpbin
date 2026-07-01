@@ -211,6 +211,8 @@ release: build
 		echo "ERROR: '$(NT)' is not a valid semver tag (expected format: vX.Y.Z[-prerelease])"; \
 		exit 1; \
 	fi
+	@if git rev-parse -q --verify "refs/tags/$(NT)" >/dev/null 2>&1; then echo "ERROR: tag $(NT) already exists locally. Pick a new version or delete it: git tag -d $(NT)"; exit 1; fi
+	@if git ls-remote --exit-code --tags origin "refs/tags/$(NT)" >/dev/null 2>&1; then echo "ERROR: tag $(NT) already exists on origin. Pick a new version."; exit 1; fi
 	@echo -n "Are you sure to create and push ${NT} tag? [y/N] " && read ans && [ $${ans:-N} = y ]
 	@echo ${NT} > ./version.txt
 	@git add -A
